@@ -11,7 +11,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/shadcn/ui/input-group"
-import { Icon } from "@/shadcn/cpns/Icon"
+import { Icon } from "@/cpns/Icon"
 import { ArrowDown01Icon, Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
 
 const Combobox = ComboboxPrimitive.Root

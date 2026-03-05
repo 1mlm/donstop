@@ -4,7 +4,7 @@ import * as React from "react"
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 
 import { cn } from "@/shadcn/lib/utils"
-import { Icon } from "@/shadcn/cpns/Icon"
+import { Icon } from "@/cpns/Icon"
 import { Tick02Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 
 function DropdownMenu({
