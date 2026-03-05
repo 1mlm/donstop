@@ -90,12 +90,18 @@ function RightClickMenuItem({ item }: { item: MenuItemType }) {
     return <ContextMenuSeparator />;
   }
 
+  const content = (
+    <>
+      {item.icon && <Icon icon={item.icon} size={16} />}
+      <span>{item.label}</span>
+    </>
+  );
+
   if (item.children) {
     return (
       <ContextMenuSub>
-        <ContextMenuSubTrigger>
-          {item.icon && <Icon icon={item.icon} size={16} />}
-          <span>{item.label}</span>
+        <ContextMenuSubTrigger className="hover:cursor-pointer">
+          {content}
         </ContextMenuSubTrigger>
         <ContextMenuSubContent>
           {item.children.map((child, idx) => (
@@ -110,9 +116,8 @@ function RightClickMenuItem({ item }: { item: MenuItemType }) {
   }
 
   return (
-    <ContextMenuItem variant={item.variant}>
-      {item.icon && <Icon icon={item.icon} size={16} />}
-      <span>{item.label}</span>
+    <ContextMenuItem variant={item.variant} className="hover:cursor-pointer">
+      {content}
     </ContextMenuItem>
   );
 }
