@@ -28,7 +28,7 @@ const ITEMS = [
   },
   { type: "separator" },
   { type: "item", id: "reset", label: "Reset", icon: DeleteIcon, variant: "destructive" as const }
-] as const satisfies readonly MenuItemType[];
+] as const satisfies MenuItemType[];
 
 // Recursive component handles items, separators, nested children
 function MenuItem({ item }: { item: MenuItemType }) {
@@ -44,6 +44,22 @@ function MenuItem({ item }: { item: MenuItemType }) {
 - **Never `children: React.ReactNode`** → Use `PropsWithChildren` from React
 - **Extract prop types from components**: `Parameters<typeof Component>[0]["propName"]`
 - Remove unnecessary type declarations—use PropsWithChildren directly
+
+## DRY JavaScript/JSX
+
+**Extract repeated JSX fragments** into variables, don't duplicate:
+```typescript
+const content = (
+  <>
+    {item.icon && <Icon icon={item.icon} size={16} />}
+    <span>{item.label}</span>
+  </>
+);
+
+// Use once in conditional logic:
+if (item.children) return <Sub>{content}</Sub>;
+return <Item>{content}</Item>;
+```
 
 ## Common Mistakes
 
