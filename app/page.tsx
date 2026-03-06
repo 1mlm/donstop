@@ -4,8 +4,9 @@ import {
   Settings01Icon,
   Task01Icon,
 } from "@hugeicons/core-free-icons";
+import MainBar from "@/cpns/MainBar";
 import { Separator } from "@/cpns/Separator";
-import { Bar } from "../cpns/Bar";
+import TaskBar from "@/cpns/TaskBar";
 import { Note } from "../cpns/Note";
 
 export default function TestPage() {
@@ -14,16 +15,16 @@ export default function TestPage() {
       className={`w-screen h-screen flex
       *:p-3 *:h-full *:flex *:flex-col *:gap-3`}
     >
-      {/* Top Bar */}
+      {/* Task Bar */}
       <div className="min-w-1/4 items-center">
         <Note icon={Task01Icon} text="Tasks" className="pl-2" />
-        <Bar />
+        <TaskBar />
       </div>
       {/* Main Content */}
       <div className="w-full">
-        <Bar />
+        <MainBar />
         <div className="flex items-center justify-center gap-2">
-          <Note text="1mlm/todo-app" icon={Github} variant="pill" />
+          <Note text="1mlm/dontstop" icon={Github} variant="pill" />
           <Separator />
           <Note text="Settings" icon={Settings01Icon} variant="pill" />
           <Separator />

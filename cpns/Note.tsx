@@ -33,6 +33,23 @@ export function Note({
     url ?? text,
   );
 
+  const randomTranslateY = randomHash(
+    ["hover:-translate-y-0.5", "hover:translate-y-1", "hover:-translate-y-1.5"],
+    url ?? text,
+  );
+
+  const randomTranslateX = randomHash(
+    [
+      "hover:translate-x-0.5",
+      "hover:-translate-x-0.5",
+      "hover:translate-x-1",
+      "hover:-translate-x-1",
+      "hover:translate-x-1.5",
+      "hover:-translate-x-1.5",
+    ],
+    url ?? text,
+  );
+
   return (
     <a
       href={url}
@@ -41,9 +58,12 @@ export function Note({
         {
           destructive: "text-destructive",
           muted: "text-muted-foreground",
-          pill: `p-0.5 px-2 rounded-full bg-card border-accent border hover-hand hover:scale-105 duration-75 ${randomRotate}`,
+          pill: `p-0.5 px-2 rounded-full bg-card border-accent border hover-hand hover:scale-105 duration-75`,
         }[variant],
         className,
+        ...(variant === "pill"
+          ? [randomTranslateY, randomTranslateX, randomRotate]
+          : []),
       )}
     >
       <Icon {...{ icon }} />

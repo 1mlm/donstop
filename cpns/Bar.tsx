@@ -7,7 +7,7 @@ export function Bar({
 }: PropsWithChildren & { className?: string }) {
   return (
     <div
-      className={cn("flex flex-col size-full bg-card rounded-xl", className)}
+      className={cn("flex flex-col size-full bg-card rounded-3xl", className)}
     >
       {children}
     </div>
