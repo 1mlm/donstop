@@ -68,6 +68,7 @@ return <Item>{content}</Item>;
 ❌ Repeating menu JSX → ✅ Const array + `.map()`  
 ❌ Hardcoded submenus → ✅ Recursive component  
 ❌ Writing shadcn components → ✅ Use CLI to install
+❌ A lot of uselessly nested div containers → ✅ Minimize div containers.
 
 ## Project Setup
 

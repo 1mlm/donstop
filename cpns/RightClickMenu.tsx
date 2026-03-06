@@ -100,7 +100,7 @@ function RightClickMenuItem({ item }: { item: MenuItemType }) {
   if (item.children) {
     return (
       <ContextMenuSub>
-        <ContextMenuSubTrigger className="hover:cursor-pointer">
+        <ContextMenuSubTrigger className="hover-hand">
           {content}
         </ContextMenuSubTrigger>
         <ContextMenuSubContent>
@@ -116,7 +116,7 @@ function RightClickMenuItem({ item }: { item: MenuItemType }) {
   }
 
   return (
-    <ContextMenuItem variant={item.variant} className="hover:cursor-pointer">
+    <ContextMenuItem variant={item.variant} className="hover-hand">
       {content}
     </ContextMenuItem>
   );
@@ -125,9 +125,7 @@ function RightClickMenuItem({ item }: { item: MenuItemType }) {
 export function RightClickMenu({ children }: PropsWithChildren) {
   return (
     <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div className="w-full h-full">{children}</div>
-      </ContextMenuTrigger>
+      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
 
       <ContextMenuContent>
         {MENU_ITEMS.map((item, idx) => (
