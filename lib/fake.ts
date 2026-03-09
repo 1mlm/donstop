@@ -1,9 +1,4 @@
-export type TaskObj = {
-  id: string;
-  label: string;
-  parentId?: string;
-  position: number;
-};
+import type { TaskObj } from "./types";
 
 export const FAKE_TASKS: TaskObj[] = [
   {

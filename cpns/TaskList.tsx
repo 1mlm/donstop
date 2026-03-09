@@ -1,4 +1,4 @@
-import type { TaskObj } from "@/lib/fake";
+import type { TaskObj } from "@/lib/types";
 import { Task } from "./Task";
 
 export default function TaskList({ tasks }: { tasks: TaskObj[] }) {

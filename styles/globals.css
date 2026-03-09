@@ -61,8 +61,8 @@
   --popover-foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
 
   /* Brand and semantic */
-  --primary: light-dark(oklch(0.541 0.281 293.009), oklch(0.606 0.25 292.717));
-  --primary-foreground: oklch(0.969 0.016 293.756);
+  --primary: light-dark(#67b7ff, #4f8ff2);
+  --primary-foreground: light-dark(#0d2745, #eef5ff);
 
   --secondary: light-dark(
     oklch(0.967 0.001 286.375),
@@ -99,11 +99,8 @@
   --sidebar: light-dark(oklch(0.985 0 0), oklch(0.205 0 0));
   --sidebar-foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
 
-  --sidebar-primary: light-dark(
-    oklch(0.541 0.281 293.009),
-    oklch(0.606 0.25 292.717)
-  );
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
+  --sidebar-primary: light-dark(#67b7ff, #4f8ff2);
+  --sidebar-primary-foreground: light-dark(#0d2745, #eef5ff);
 
   --sidebar-accent: light-dark(oklch(0.97 0 0), oklch(0.269 0 0));
   --sidebar-accent-foreground: light-dark(oklch(0.205 0 0), oklch(0.985 0 0));
