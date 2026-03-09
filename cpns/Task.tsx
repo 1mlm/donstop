@@ -17,25 +17,24 @@ export function Task({ task }: { task: TaskObj }) {
   const isParent = children.length > 0;
   return (
     <div
-      className={`flex flex-col gap-1.5 py-0.5 px-2 pr-2.5
+      className={`flex flex-col py-0.5 px-2 pr-2.5
         rounded-2xl
         ${expanded && "rounded-tl-md pb-1"}
         select-none
-        border
-        hover-hand hover:translate-x-1 duration-75 bg-primary/5`}
+        border hover:translate-x-1 duration-75 bg-primary/5`}
     >
       <button
-        className="flex items-center justify-between"
+        className={`flex items-center justify-between hover-hand ${expanded && "pb-1"}`}
         onClick={() => isParent && setExpanded(!expanded)}
       >
-        <span className="flex gap-2 items-center text-ellipsis text-nowrap">
-          <Icon icon={PlayIcon} />
-          {task.label}
+        <span className="flex gap-2 items-center text-ellipsis text-nowrap w-full">
+          <Icon icon={PlayIcon} className="shrink-0" />
+          <span className="truncate">{task.label}</span>
         </span>
         {isParent && (
           <Icon
             icon={ChevronDown}
-            className={`duration-200 ${expanded ? "scale-[-120%]" : "scale-120"}`}
+            className={`duration-200 ${expanded ? "-scale-125" : "scale-125"}`}
           />
         )}
       </button>

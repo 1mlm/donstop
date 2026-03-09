@@ -4,3 +4,7 @@ export function randomHash<K>(arr: K[], text: string) {
       arr.length
   ];
 }
+
+export async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
