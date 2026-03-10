@@ -8,12 +8,15 @@ import { create, useStore } from "zustand";
 import { FAKE_TASKS } from "./fake";
 import type { TaskObj } from "./types";
 
-type TaskID = TaskObj["id"];
+export type TaskID = TaskObj["id"];
 type Store = {
   tasks: TaskObj[];
   activeTaskID: TaskID | null;
   setActiveTaskID: (taskID: TaskID) => void;
   removeActiveTaskID: () => void;
+  getRootTaskIDs: () => TaskID[];
+  getTaskFromID: (taskID: TaskID) => TaskObj | null;
+  getTaskChildrenIDs: (taskID: TaskID) => TaskID[];
 };
 
 export type TODOStoreAPI = ReturnType<typeof createTODOStore>;
@@ -33,7 +36,7 @@ export const TODOStoreProvider = ({ children }: PropsWithChildren) => {
 };
 
 export const createTODOStore = (tasks: TaskObj[]) =>
-  create<Store>()((set) => ({
+  create<Store>()((set,get) => ({
     tasks,
     activeTaskID: null,
     setActiveTaskID(taskID) {
@@ -41,6 +44,15 @@ export const createTODOStore = (tasks: TaskObj[]) =>
     },
     removeActiveTaskID() {
       set({ activeTaskID: null });
+    },
+    getRootTaskIDs() {
+      return get().tasks.filter(t => !t.parentId).map(t => t.id);
+    },
+    getTaskFromID(taskID) {
+      return get().tasks.find(t => t.id === taskID) || null;
+    },
+    getTaskChildrenIDs(taskID) {
+      return get().tasks.filter(t => t.parentId === taskID).map(t => t.id);
     },
   }));
 

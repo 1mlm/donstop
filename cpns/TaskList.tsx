@@ -1,6 +1,6 @@
-import type { TaskObj } from "@/lib/types";
+import type { TaskID } from "@/lib/store";
 import { Task } from "./Task";
 
-export default function TaskList({ tasks }: { tasks: TaskObj[] }) {
-  return tasks.map((task) => <Task key={task.id} task={task} />);
+export default function TaskList({ taskIDs }: { taskIDs: TaskID[] }) {
+  return taskIDs.map((taskID) => <Task key={taskID} {...{ taskID }} />);
 }

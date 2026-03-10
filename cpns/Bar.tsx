@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import type { PropsWithChildren } from "react";
 import { cn } from "@/shadcn/lib/utils";
 
@@ -6,10 +7,10 @@ export function Bar({
   children,
 }: PropsWithChildren & { className?: string }) {
   return (
-    <div
-      className={cn("flex flex-col size-full bg-card rounded-3xl", className)}
+    <motion.div
+      className={cn("flex flex-col size-full rounded-3xl", className)}
     >
       {children}
-    </div>
+    </motion.div>
   );
 }

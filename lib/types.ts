@@ -3,4 +3,5 @@ export type TaskObj = {
   label: string;
   parentId?: string;
   position: number;
+  time: number;
 };

@@ -61,7 +61,7 @@
   --popover-foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
 
   /* Brand and semantic */
-  --primary: light-dark(#3eff29, #4f8ff2);
+  --primary: light-dark(oklch(0.541 0.281 293.009), oklch(0.541 0.281 293.009));
   --primary-foreground: light-dark(#0d2745, #eef5ff);
 
   --secondary: light-dark(
