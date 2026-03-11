@@ -32,7 +32,7 @@ export default function MainBar() {
           <motion.div key={"no-active-task"} {...MOTION_PROPS}>
             <Icon
               icon={ZzzIcon}
-              className=" size-24 opacity-35 animate-[spin_30s_linear_infinite]"
+              className="size-24 opacity-35 animate-[spin_30s_linear_infinite]"
             />
           </motion.div>
         )}

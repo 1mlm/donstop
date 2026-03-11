@@ -17,12 +17,14 @@ export function Note({
   return (
     <a
       href={url}
+      target="_blank"
       className={cn(
-        `inline-flex gap-1.5 items-center`,
+        `inline-flex gap-1.5 items-center select-none`,
+        url && "hover:cursor-pointer hover:scale-105 duration-75",
         {
           destructive: "text-destructive",
           muted: "text-muted-foreground",
-          pill: `p-0.5 px-2 rounded-full bg-card border-accent border hover-hand hover:scale-105 duration-75`,
+          pill: `p-0.5 px-2 rounded-full bg-card border-accent border`,
         }[variant],
         className,
       )}

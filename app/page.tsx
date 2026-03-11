@@ -2,7 +2,6 @@
 import {
   CalendarRemove01Icon,
   Github,
-  Settings01Icon,
   Task01Icon,
 } from "@hugeicons/core-free-icons";
 import MainBar from "@/cpns/MainBar";
@@ -27,10 +26,15 @@ export default function TestPage() {
         <div className="w-full">
           <MainBar />
           <div className="flex items-center justify-center gap-2">
-            <Note text="1mlm/dontstop" icon={Github} variant="pill" />
+            <Note
+              url="https://github.com/1mlm/donstop"
+              text="1mlm/donstop"
+              icon={Github}
+              variant="pill"
+            />
             <Separator />
-            <Note text="Settings" icon={Settings01Icon} variant="pill" />
-            <Separator />
+            {/* <Note text="Settings" icon={Settings01Icon} variant="pill" />
+            <Separator /> */}
             <Note
               variant={"destructive"}
               icon={CalendarRemove01Icon}

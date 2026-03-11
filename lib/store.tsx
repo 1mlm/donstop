@@ -12,6 +12,7 @@ export type TaskID = TaskObj["id"];
 type Store = {
   tasks: TaskObj[];
   activeTaskID: TaskID | null;
+  intervalID?: ReturnType<typeof setInterval>;
   setActiveTaskID: (taskID: TaskID) => void;
   removeActiveTaskID: () => void;
   getRootTaskIDs: () => TaskID[];
@@ -36,23 +37,56 @@ export const TODOStoreProvider = ({ children }: PropsWithChildren) => {
 };
 
 export const createTODOStore = (tasks: TaskObj[]) =>
-  create<Store>()((set,get) => ({
+  create<Store>()((set, get) => ({
     tasks,
     activeTaskID: null,
     setActiveTaskID(taskID) {
-      set({ activeTaskID: taskID });
+      const previousActiveTaskID = get().activeTaskID;
+      if (previousActiveTaskID) {
+        clearInterval(get().intervalID);
+        set({ intervalID: undefined });
+      }
+
+      set({
+        activeTaskID: taskID,
+      });
+
+      const intervalID = setInterval(() => {
+        const activeTaskID = get().activeTaskID;
+        if (!activeTaskID) return;
+
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === activeTaskID ? { ...t, time: t.time + 1 } : t,
+          ),
+        }));
+      }, 1000);
+
+      console.log(intervalID);
+
+      set({ intervalID });
     },
     removeActiveTaskID() {
-      set({ activeTaskID: null });
+      const intervalID = get().intervalID;
+      if (intervalID) {
+        clearInterval(intervalID);
+        set({ activeTaskID: null, intervalID: undefined });
+      } else {
+        set({ activeTaskID: null });
+      }
     },
     getRootTaskIDs() {
-      return get().tasks.filter(t => !t.parentId).map(t => t.id);
+      return get()
+        .tasks.filter((t) => !t.parentId)
+        .map((t) => t.id);
     },
     getTaskFromID(taskID) {
-      return get().tasks.find(t => t.id === taskID) || null;
+      return get().tasks.find((t) => t.id === taskID) || null;
     },
     getTaskChildrenIDs(taskID) {
-      return get().tasks.filter(t => t.parentId === taskID).map(t => t.id);
+      return get()
+        .tasks.filter((t) => t.parentId === taskID)
+        .map((t) => t.id);
     },
   }));
 

@@ -26,7 +26,7 @@ export function formatChronoTime(time: number) {
   const seconds = totalSeconds % 60;
 
   if (totalSeconds < 60) {
-    return `${seconds}`;
+    return `${seconds}s`;
   }
 
   if (hours > 0) {
