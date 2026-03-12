@@ -16,37 +16,67 @@ Compact nested task and time-tracking app focused on low-friction flow: write ta
 
 https://github.com/user-attachments/assets/457b6fdf-ead1-41c3-9669-9ed8faa23ce8
 
+
+## ❤️ Inspiration
+
+I've had a lot of trouble keeping up and staying motivated to do my tasks outside my programming hobby (school work, learning cybersecurity, part-time SWE job), so this is a todo app I made that logs my tasks as Google Calendar events.
+
+Seeing my work live is extremely motivating, and it pushes me to continue in this rhythm. It also makes me realize how much time I waste on TikTok or other social media platforms, and helps me stop procrastinating.
+
+## 🤖 AI
+
+This project was built by me, driven by my own opinions on architecture, DRY principles, file naming conventions, dev stack, UI icons, big decisions, layout, and compactness. And with the help of my custom `Github Copilot Pro (GPT-5.3)` to learn how to use AI on projects.
+
+Copilot contributed to UI optimizations, bug fixes, unit tests, drag-and-drop logic, advanced features like Google Calendar integration, shadcn UI glitches, individual settings, low-level store and local storage management, legacy-to-new local storage task schema migration, and this README.
+
+"Custom" means Copilot uses my previous projects as inspiration for what counts as "too many" files in a folder, lines in a file, and when refactoring is needed. This lets me keep up with every file and their relationships, so I can make high and medium-level changes myself without the need of Copilot.
+
 ## ✨ Features
 
-- Task system
-	- Unlimited nested subtasks.
-	- Drag-and-drop reordering between levels (before, after, inside).
-	- Fast inline operations: create, rename, finish, restore, delete, favorite.
-	- Active-task controls: start, stop, finish, cancel, reset, transfer time.
+- **Task System**
+	- Unlimited nested subtasks with fast inline create, rename, finish, restore, delete, favorite.
+	- Drag-and-drop reordering (before, after, inside) with stable overlays and placeholder rendering.
 	- Live duration preview per task and cumulative tracked duration.
-- DnD behavior
-	- Clear insertion rails and inside-drop highlight.
-	- Out-of-bounds cancellation behavior with end-of-list snap support.
-	- Stable drag overlay and placeholder-driven source rendering.
-	- Expanded-state restoration for tasks collapsed during self-drag.
-- History and tracking
-	- Session history with timestamps and duration.
-	- Activity feed for key lifecycle events.
-	- Copy tracking for task ID/name copy actions.
-	- Calendar sync status visibility per tracked entry.
-- Settings
+	- Active-task controls: start, stop, finish, cancel, reset, transfer time between tasks.
+	- Minimal, mobile-friendly UI with hover-only menus and grouped submenus (Name/Time).
+	- Time edit popover: shadcn popover with auto-sizing input, keyboard-friendly, supports hh:mm:ss, mm:ss, ss.
+
+- **Drag & Drop**
+	- Clear insertion rails, inside-drop highlight, and out-of-bounds cancellation with end-of-list snap.
+	- No setState-in-render errors: all DnD state updates are deferred for React 19 safety.
+	- Expanded/collapsed state restoration for tasks during drag.
+
+- **History & Activity**
+	- Full session history with timestamps, durations, and activity feed for all key events.
+	- Rich activity kinds: task finish, transfer, reposition, Google Calendar connect/disconnect/enable/disable/target change, settings changes, copy actions.
+	- Dedicated icons and labels for each activity type.
+	- Runtime logging for calendar and settings actions.
+
+- **Settings**
 	- Primary color selection (default: blue).
 	- Cursor and interaction preferences.
 	- Calendar sync toggle controls.
-	- Clear all section to reset tasks/history safely.
-- Google Calendar integration (optional)
-	- Works only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is provided.
-	- Dedicated unavailable state when the env key is missing.
-	- Account link/unlink flow, calendar selection, event sync, and event cleanup.
-- Platform and quality
+	- Clear all: safely reset tasks/history.
+
+- **Google Calendar Integration (optional)**
+	- Only enabled with `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+	- Dedicated unavailable state if env key missing.
+	- Account link/unlink, calendar selection, event sync, and event cleanup.
+	- Event manager: select, multi-select, and delete events with dynamic button text ("No event selected" when none).
+	- Dedupe: prevents duplicate event creation on finish.
+
+- **Platform & Quality**
 	- Local persistence for tasks, sessions, history, and activity.
-	- Type-safe codebase with TypeScript and runtime-safe store flows.
+	- Type-safe codebase (TypeScript) and runtime-safe store flows.
 	- Biome lint/format workflow for consistent code style.
+	- Node.js test suite (node:test) for calendar sync, session transfer/reset, move planning, and lifecycle utilities (30+ tests).
+	- All code is mobile-first and responsive.
+
+- **Other**
+	- All destructive actions (delete, reset, event delete) use hourglass loading and confirmation dialogs.
+	- Copy/edit actions are hover-only for consistency.
+	- All menus use element-first grouping and are accessible by keyboard.
+	- All error and edge cases (drag out of bounds, slot composition, etc.) are handled and tested.
 
 ## 🚀 Quick Start
 
@@ -59,9 +89,7 @@ Open http://localhost:3005
 
 ## ⚙️ Environment
 
-No env variables are required to run the app locally.
-
-Optional values:
+**No env variables are required** to run the app locally, but optionally, you can add: 
 
 ```env
 # Optional: enables Google Calendar integration UI and OAuth flow
@@ -98,12 +126,6 @@ Production additions:
 - https://www.googleapis.com/auth/calendar.calendarlist.readonly
 - https://www.googleapis.com/auth/calendar.events
 - https://www.googleapis.com/auth/calendar.calendars
-
-## ❤️ Inspiration
-
-I've had a lot of trouble keeping up and staying motivated to do my tasks outside my programming hobby (school work, learning cybersecurity, part-time SWE job), so this is a todo app I made that logs my tasks as Google Calendar events.
-
-Seeing my work live is extremely motivating, and it pushes me to continue in this rhythm. It also makes me realize how much time I waste on TikTok or other social media platforms, and helps me stop procrastinating.
 
 ## 🧩 Scripts
 
