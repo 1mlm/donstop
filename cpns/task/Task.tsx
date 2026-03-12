@@ -283,12 +283,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
     opacity: 1,
   };
 
-  useTaskCollapseWhileDraggingEffect({
-    draggingTaskID,
-    taskID,
-    expanded,
-    setExpanded,
-  });
+  useTaskCollapseWhileDraggingEffect();
 
   useTaskEditValueSyncEffect({ taskLabel, setEditValue: setEditNameValue });
 
