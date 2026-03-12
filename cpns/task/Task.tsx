@@ -759,7 +759,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
                               // Only close menu on desktop
                               if (
                                 typeof window !== "undefined" &&
-                                !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                                !(
+                                  "ontouchstart" in window ||
+                                  navigator.maxTouchPoints > 0
+                                )
                               ) {
                                 if (actionsMenuOpen || elementMenuOpen !== null)
                                   setActionsMenuOpen(false);
@@ -771,7 +774,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
                             // Only close menu on desktop
                             if (
                               typeof window !== "undefined" &&
-                              !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                              !(
+                                "ontouchstart" in window ||
+                                navigator.maxTouchPoints > 0
+                              )
                             ) {
                               if (actionsMenuOpen || elementMenuOpen !== null)
                                 setActionsMenuOpen(false);
