@@ -1,13 +1,15 @@
-export type TaskObj = {
-  id: string;
-  label: string;
-  parentId?: string;
-  position: number;
-  time: number;
-  isFinished?: boolean;
-  finishedAt?: string;
-  isFavorite?: boolean;
-};
+
+  export type TaskObj = {
+    id: string;
+    label: string;
+    parentId?: string;
+    position: number;
+    time: number;
+    isFinished?: boolean;
+    finishedAt?: string;
+    isFavorite?: boolean;
+    deletedAt?: string;
+  };
 
 export type ActiveTaskSession = {
   taskId: TaskObj["id"];

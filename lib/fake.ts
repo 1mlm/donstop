@@ -1,3 +1,4 @@
+import { generateRandomID } from "../lib/util";
 import type { HistoryActivityItem, TaskHistoryEntry, TaskObj } from "./types";
 
 const baseFakeTasks: TaskObj[] = [
@@ -205,8 +206,8 @@ export function createFakeHistoryData(
     },
   ) => {
     activity.push({
-      id: crypto.randomUUID(),
-      taskHistoryEntryID: item.taskHistoryEntryID || crypto.randomUUID(),
+      id: generateRandomID(),
+      taskHistoryEntryID: item.taskHistoryEntryID || generateRandomID(),
       ...item,
     });
   };
@@ -222,7 +223,7 @@ export function createFakeHistoryData(
     const startedAtMs = endedAtMs - durationSeconds * 1000;
     const startedAt = new Date(startedAtMs).toISOString();
     const endedAt = new Date(endedAtMs).toISOString();
-    const entryId = crypto.randomUUID();
+    const entryId = generateRandomID();
 
     const historyEntry: TaskHistoryEntry = {
       id: entryId,

@@ -1,7 +1,4 @@
 import { type MutableRefObject, type RefObject, useEffect } from "react";
-import type { TaskID } from "@/lib/store";
-
-const expandedBeforeSelfDrag = new Map<TaskID, boolean>();
 
 export function useTaskAutoExpandOnChildrenEffect({
   childrenCount,
@@ -23,39 +20,11 @@ export function useTaskAutoExpandOnChildrenEffect({
   }, [childrenCount, expanded, setExpanded, prevChildrenCountRef]);
 }
 
-export function useTaskCollapseWhileDraggingEffect({
-  draggingTaskID,
-  taskID,
-  expanded,
-  setExpanded,
-}: {
-  draggingTaskID: TaskID | null;
-  taskID: TaskID;
-  expanded: boolean;
-  setExpanded: (expanded: boolean) => void;
-}) {
+export function useTaskCollapseWhileDraggingEffect() {
   useEffect(() => {
-    if (draggingTaskID === taskID) {
-      if (!expandedBeforeSelfDrag.has(taskID)) {
-        expandedBeforeSelfDrag.set(taskID, expanded);
-      }
-
-      if (expanded) {
-        setExpanded(false);
-      }
-
-      return;
-    }
-
-    const wasExpandedBeforeDrag = expandedBeforeSelfDrag.get(taskID);
-    if (wasExpandedBeforeDrag && !expanded) {
-      setExpanded(true);
-    }
-
-    if (wasExpandedBeforeDrag !== undefined) {
-      expandedBeforeSelfDrag.delete(taskID);
-    }
-  }, [draggingTaskID, expanded, taskID, setExpanded]);
+    // Do nothing: do not auto-collapse or auto-expand during drag
+    // Only prevent toggling expanded state during drag in the Task component
+  }, []);
 }
 
 export function useTaskEditValueSyncEffect({

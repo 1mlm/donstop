@@ -1,3 +1,31 @@
+// Returns a human-friendly relative time string (e.g. '2 minutes ago')
+export function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (Number.isNaN(diff)) return "";
+  if (diff < 60) return `${diff} second${diff === 1 ? "" : "s"} ago`;
+  const mins = Math.floor(diff / 60);
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+  const years = Math.floor(months / 12);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+// Cross-browser safe random ID generator
+export function generateRandomID() {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2);
+}
 export function randomHash<K>(arr: K[], text: string) {
   return arr[
     text.split("").reduce((acc, curr) => curr.charCodeAt(0) + acc, 0) %

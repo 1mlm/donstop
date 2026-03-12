@@ -5,7 +5,7 @@ import type {
   TaskHistoryEntry,
   TaskObj,
 } from "../types";
-import { getElapsedSeconds } from "../util";
+import { generateRandomID, getElapsedSeconds } from "../util";
 
 export const TODO_STORE_STORAGE_KEY = "todo-app-store";
 
@@ -13,6 +13,7 @@ export type TaskID = TaskObj["id"];
 
 export type PersistedTODOState = {
   tasks: TaskObj[];
+  deletedTasks: TaskObj[];
   activeSession: ActiveTaskSession | null;
   history: TaskHistoryEntry[];
   activity: HistoryActivityItem[];
@@ -95,6 +96,7 @@ const historyActivityItemSchema = z.object({
 
 const persistedTodoStateSchema = z.object({
   tasks: z.array(taskObjSchema),
+  deletedTasks: z.array(taskObjSchema).optional(),
   activeSession: activeTaskSessionSchema,
   history: z.array(taskHistoryEntrySchema),
   activity: z.array(historyActivityItemSchema),
@@ -107,6 +109,7 @@ export function sortByPosition(left: TaskObj, right: TaskObj) {
 export function createDefaultState(tasks: TaskObj[]): PersistedTODOState {
   return {
     tasks,
+    deletedTasks: [],
     activeSession: null,
     history: [],
     activity: [],
@@ -120,8 +123,13 @@ export function validatePersistedState(
   const result = persistedTodoStateSchema.safeParse(input);
 
   if (result.success) {
+    // Patch: If deletedTasks is missing, default to []
+    const state = {
+      ...result.data,
+      deletedTasks: result.data.deletedTasks ?? [],
+    };
     return {
-      state: result.data,
+      state,
       isValid: true,
     };
   }
@@ -152,7 +160,7 @@ export function completeActiveSession(
   const endedAt = new Date(endTimeMs).toISOString();
 
   const completedSession: TaskHistoryEntry = {
-    id: crypto.randomUUID(),
+    id: generateRandomID(),
     taskId: activeTask.id,
     taskLabel: activeTask.label,
     startedAt: activeSession.startedAt,
@@ -177,7 +185,7 @@ export function createTaskSessionActivity(
   taskHistoryEntry: TaskHistoryEntry,
 ): HistoryActivityItem {
   return {
-    id: crypto.randomUUID(),
+    id: generateRandomID(),
     kind: "task_session",
     createdAt: taskHistoryEntry.endedAt,
     taskLabel: taskHistoryEntry.taskLabel,
@@ -193,7 +201,7 @@ export function createCalendarActivity(
   taskHistoryEntry: TaskHistoryEntry,
 ): HistoryActivityItem {
   return {
-    id: crypto.randomUUID(),
+    id: generateRandomID(),
     kind,
     createdAt: new Date().toISOString(),
     taskLabel: taskHistoryEntry.taskLabel,

@@ -1,12 +1,9 @@
 import { PaintBoardIcon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/cpns/Icon";
+import { cn } from "@/shadcn/lib/utils";
 import { type PaletteColor, TAILWIND_500_COLORS } from "./settings.constants";
 import { COLOR_PREVIEW_TEXT_CLASS } from "./settings.styles";
-import {
-  applyPrimaryColor,
-  hexToOklch,
-  writeStoredPrimaryColor,
-} from "./settings.utils";
+import { applyPrimaryColor, writeStoredPrimaryColor } from "./settings.utils";
 
 export function PrimaryColorSection({
   primaryColor,
@@ -32,11 +29,19 @@ export function PrimaryColorSection({
             Primary color
           </p>
           <span
-            className={COLOR_PREVIEW_TEXT_CLASS}
+            className={cn(
+              COLOR_PREVIEW_TEXT_CLASS,
+              "inline-flex gap-1 items-center",
+            )}
             style={{ color: primaryColor }}
           >
-            {selectedPrimaryColor?.name ?? "Custom"} - {primaryColor} -{" "}
-            {hexToOklch(primaryColor)}
+            {selectedPrimaryColor?.name ?? "Custom"}
+            <span
+              style={{ backgroundColor: primaryColor }}
+              className={`text-primary-foreground px-1 rounded-sm`}
+            >
+              {primaryColor}
+            </span>
           </span>
         </div>
       </div>

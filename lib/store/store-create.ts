@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { createFakeHistoryData, createFakeTasks } from "../fake";
 import { malikDebug } from "../malik-debug";
 import type { TaskObj } from "../types";
+import { generateRandomID } from "../util";
 import {
   computeCancelActiveTaskState,
   computeFinishActiveTaskState,
@@ -50,6 +51,9 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
     placement: TaskMovePlacement,
   ) => boolean;
   deleteTask: (taskID: TaskID) => boolean;
+  restoreDeletedTask: (taskID: TaskID) => boolean;
+  deletedTasks: TaskObj[];
+  clearTrash: () => void;
   logTaskCopied: (taskID: TaskID, target: "id" | "name") => void;
   resetAllData: () => void;
   wipeAllData: () => void;
@@ -80,6 +84,8 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   getTaskFromID: (taskID: TaskID) => TaskObj | null;
   getTaskChildrenIDs: (taskID: TaskID) => TaskID[];
   hasActiveChildRecursive: (taskID: TaskID) => boolean;
+  taskExpanded: Record<string, boolean>;
+  setTaskExpanded: (taskID: string, expanded: boolean) => void;
 };
 
 function isLegacySeededFakeState(state: ReturnType<typeof createDefaultState>) {
@@ -133,13 +139,14 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
     persist(
       (set, get) => ({
         ...createDefaultState(tasks),
+        deletedTasks: [],
         createTask(label, parentId) {
           const trimmed = label.trim();
           if (!trimmed) {
             return null;
           }
 
-          const taskID = crypto.randomUUID();
+          const taskID = generateRandomID();
           const createdAt = new Date().toISOString();
 
           set((state) => ({
@@ -170,6 +177,13 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           }));
 
           return taskID;
+        },
+        taskExpanded: {},
+        setTaskExpanded(taskID, expanded) {
+          set((state) => ({
+            ...state,
+            taskExpanded: { ...state.taskExpanded, [taskID]: expanded },
+          }));
         },
         startTask(taskID) {
           const previousSession = get().activeSession;
@@ -608,7 +622,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "calendar_connected" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Google Calendar",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
                 subjectLabel,
               },
               ...state.activity,
@@ -623,7 +637,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "calendar_disconnected" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Google Calendar",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
                 subjectLabel,
               },
               ...state.activity,
@@ -638,7 +652,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "calendar_enabled" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Google Calendar",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
                 subjectLabel,
               },
               ...state.activity,
@@ -653,7 +667,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "calendar_disabled" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Google Calendar",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
                 subjectLabel,
               },
               ...state.activity,
@@ -672,7 +686,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "calendar_target_changed" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Google Calendar",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
                 oldValue: previousCalendarName,
                 newValue: nextCalendarName,
               },
@@ -688,7 +702,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "settings_cursor_enabled" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Settings",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
               },
               ...state.activity,
             ],
@@ -702,7 +716,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "settings_cursor_disabled" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Settings",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
               },
               ...state.activity,
             ],
@@ -720,7 +734,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 kind: "settings_primary_color_changed" as const,
                 createdAt: new Date().toISOString(),
                 taskLabel: "Settings",
-                taskHistoryEntryID: crypto.randomUUID(),
+                taskHistoryEntryID: generateRandomID(),
                 oldValue: previousColor,
                 newValue: nextColor,
               },
@@ -849,9 +863,13 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           }
 
           const deletedAt = new Date().toISOString();
+          const deletedSubtree = currentTasks
+            .filter((item) => subtreeIDs.includes(item.id))
+            .map((item) => ({ ...item, deletedAt }));
 
           set((state) => ({
             tasks: state.tasks.filter((item) => !subtreeIDs.includes(item.id)),
+            deletedTasks: [...state.deletedTasks, ...deletedSubtree],
             activity: [
               {
                 id: `task-deleted-${Date.now()}`,
@@ -864,6 +882,57 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             ],
           }));
 
+          return true;
+        },
+
+        clearTrash() {
+          set((state) => ({ ...state, deletedTasks: [] }));
+        },
+        restoreDeletedTask(taskID) {
+          const { deletedTasks, tasks } = get();
+          const taskToRestore = deletedTasks.find((t) => t.id === taskID);
+          if (!taskToRestore) return false;
+
+          // Check if parent exists, else set as root
+          let parentId = taskToRestore.parentId;
+          if (parentId && !tasks.some((t) => t.id === parentId)) {
+            parentId = undefined;
+          }
+
+          // Restore the task (and its subtree)
+          const subtreeIDs = [
+            taskID,
+            ...collectDescendantsByParent(deletedTasks, taskID),
+          ];
+          const subtree = deletedTasks.filter((t) => subtreeIDs.includes(t.id));
+          // Update parentId for root if needed
+          const restoredSubtree = subtree.map((t) => {
+            if (t.id === taskID) {
+              return { ...t, parentId };
+            }
+            // If parent is not in subtree, set as root
+            if (t.parentId && !subtreeIDs.includes(t.parentId)) {
+              return { ...t, parentId: undefined };
+            }
+            return t;
+          });
+
+          set((state) => ({
+            tasks: [...state.tasks, ...restoredSubtree],
+            deletedTasks: state.deletedTasks.filter(
+              (t) => !subtreeIDs.includes(t.id),
+            ),
+            activity: [
+              {
+                id: `task-restored-${Date.now()}`,
+                kind: "task_restored",
+                createdAt: new Date().toISOString(),
+                taskLabel: taskToRestore.label,
+                taskHistoryEntryID: taskID,
+              },
+              ...state.activity,
+            ],
+          }));
           return true;
         },
         logTaskCopied(taskID, target) {
@@ -911,6 +980,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           activeSession: state.activeSession,
           history: state.history,
           activity: state.activity,
+          taskExpanded: state.taskExpanded,
         }),
         migrate: (persistedState) => {
           const maybeStorageValue = persistedState as {

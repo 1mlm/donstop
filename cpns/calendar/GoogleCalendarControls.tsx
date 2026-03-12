@@ -28,6 +28,7 @@ import {
   useCalendarSync,
   useGoogleCalendarAuth,
 } from "@/lib/calendar";
+import { safeLocalStorage } from "@/lib/safe-local-storage";
 import { useTODOStore } from "@/lib/store";
 import { formatDateTime } from "@/lib/util";
 import {
@@ -264,9 +265,7 @@ function GoogleCalendarControlsInner() {
   const wasLinkedRef = useRef(false);
 
   useEffect(() => {
-    const savedValue = window.localStorage.getItem(
-      GOOGLE_INTERACTION_ENABLED_KEY,
-    );
+    const savedValue = safeLocalStorage.getItem(GOOGLE_INTERACTION_ENABLED_KEY);
 
     if (savedValue === "0") {
       setIsGoogleInteractionEnabled(false);
@@ -274,7 +273,7 @@ function GoogleCalendarControlsInner() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(
+    safeLocalStorage.setItem(
       GOOGLE_INTERACTION_ENABLED_KEY,
       isGoogleInteractionEnabled ? "1" : "0",
     );

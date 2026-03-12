@@ -2,6 +2,7 @@
 
 import { useGoogleLogin } from "@react-oauth/google";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { safeLocalStorage } from "@/lib/safe-local-storage";
 import { malikDebug } from "../malik-debug";
 import {
   createGoogleCalendar,
@@ -23,9 +24,9 @@ export function clearStoredGoogleCalendarAuth() {
     return;
   }
 
-  window.localStorage.removeItem(GOOGLE_TOKEN_KEY);
-  window.localStorage.removeItem(TARGET_CALENDAR_KEY);
-  window.localStorage.removeItem(TARGET_CALENDAR_NAME_KEY);
+  safeLocalStorage.removeItem(GOOGLE_TOKEN_KEY);
+  safeLocalStorage.removeItem(TARGET_CALENDAR_KEY);
+  safeLocalStorage.removeItem(TARGET_CALENDAR_NAME_KEY);
 }
 
 export type GoogleCalendarAuthState = {
@@ -138,7 +139,7 @@ export function useGoogleCalendarAuth() {
     prompt: "consent",
     onSuccess: async (tokenResponse) => {
       setLoginFeedback(null);
-      window.localStorage.setItem(TOKEN_KEY, tokenResponse.access_token);
+      safeLocalStorage.setItem(TOKEN_KEY, tokenResponse.access_token);
       malikDebug("✅", "google login ok");
       await loadCalendars(
         tokenResponse.access_token,
@@ -187,9 +188,9 @@ export function useGoogleCalendarAuth() {
 
   // Restore token on mount
   useEffect(() => {
-    const savedToken = window.localStorage.getItem(TOKEN_KEY);
-    const savedCalendarID = window.localStorage.getItem(TARGET_CALENDAR_KEY);
-    const savedCalendarName = window.localStorage.getItem(
+    const savedToken = safeLocalStorage.getItem(TOKEN_KEY);
+    const savedCalendarID = safeLocalStorage.getItem(TARGET_CALENDAR_KEY);
+    const savedCalendarName = safeLocalStorage.getItem(
       TARGET_CALENDAR_NAME_KEY,
     );
 
@@ -208,19 +209,19 @@ export function useGoogleCalendarAuth() {
   // Persist calendar selection
   useEffect(() => {
     if (!targetCalendarID) {
-      window.localStorage.removeItem(TARGET_CALENDAR_KEY);
+      safeLocalStorage.removeItem(TARGET_CALENDAR_KEY);
     } else {
-      window.localStorage.setItem(TARGET_CALENDAR_KEY, targetCalendarID);
+      safeLocalStorage.setItem(TARGET_CALENDAR_KEY, targetCalendarID);
     }
   }, [targetCalendarID]);
 
   useEffect(() => {
     if (!targetCalendarName) {
-      window.localStorage.removeItem(TARGET_CALENDAR_NAME_KEY);
+      safeLocalStorage.removeItem(TARGET_CALENDAR_NAME_KEY);
       return;
     }
 
-    window.localStorage.setItem(TARGET_CALENDAR_NAME_KEY, targetCalendarName);
+    safeLocalStorage.setItem(TARGET_CALENDAR_NAME_KEY, targetCalendarName);
   }, [targetCalendarName]);
 
   const createAndSelectCalendar = useCallback(

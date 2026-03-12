@@ -45,7 +45,6 @@ import {
 } from "./task.effects";
 import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
 
-const taskExpandedState = new Map<TaskID, boolean>();
 const OPEN_ACTIONS_DELAY_MS = 500;
 const CLOSE_ACTIONS_DELAY_MS = 150;
 const OPEN_ELEMENT_DELAY_MS = 45;
@@ -126,9 +125,7 @@ function scheduleTimer(
 }
 
 export function Task({ taskID }: { taskID: TaskID }) {
-  const [expanded, setExpanded] = useState(
-    () => taskExpandedState.get(taskID) ?? false,
-  );
+  // All useState and useRef declarations must come first (no duplicates)
   const [isTaskHovered, setIsTaskHovered] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [elementMenuOpen, setElementMenuOpen] = useState<
@@ -150,6 +147,39 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const closeActionsTimeoutRef = useRef<number | null>(null);
   const openElementTimeoutRef = useRef<number | null>(null);
   const closeElementTimeoutRef = useRef<number | null>(null);
+
+  // Close actions menu on outside tap (mobile)
+  useEffect(() => {
+    if (!actionsMenuOpen) return;
+    // Only activate on touch devices
+    if (
+      typeof window === "undefined" ||
+      (!("ontouchstart" in window) && !(navigator.maxTouchPoints > 0))
+    )
+      return;
+
+    function handlePointerDown(e: PointerEvent) {
+      // If click is inside the menu or trigger, do nothing
+      const menu = document.querySelector(".fixed.z-\\[9999\\]");
+      if (menu?.contains(e.target as Node)) return;
+      if (actionsTriggerRef.current?.contains(e.target as Node)) return;
+      setActionsMenuOpen(false);
+      setElementMenuOpen(null);
+    }
+    window.addEventListener("pointerdown", handlePointerDown, {
+      capture: true,
+    });
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown, {
+        capture: true,
+      });
+    };
+  }, [actionsMenuOpen]);
+  const expanded = useTODOStore((s) => s.taskExpanded[taskID] ?? false);
+  const setTaskExpanded = useTODOStore((s) => s.setTaskExpanded);
+  const setExpanded = (val: boolean | ((prev: boolean) => boolean)) => {
+    setTaskExpanded(taskID, typeof val === "function" ? val(expanded) : val);
+  };
 
   const startTask = useTODOStore((state) => state.startTask);
   const stopActiveTask = useTODOStore((state) => state.stopActiveTask);
@@ -195,9 +225,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const isAnyMenuOpen = actionsMenuOpen || elementMenuOpen !== null;
   const prevChildrenCountRef = useRef(childrenIDs.length);
 
-  useEffect(() => {
-    taskExpandedState.set(taskID, expanded);
-  }, [taskID, expanded]);
+  // No need to sync to Map; state is now persisted in store
 
   useTaskAutoExpandOnChildrenEffect({
     childrenCount: childrenIDs.length,
@@ -278,7 +306,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
   ]);
 
   useEffect(() => {
-    if (!isTaskHovered || isAnyMenuOpen) {
+    if (!isTaskHovered || isAnyMenuOpen || isRowBeingDragged) {
       return;
     }
 
@@ -302,7 +330,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
     return () => {
       window.removeEventListener("pointermove", handlePointerMove);
     };
-  }, [isTaskHovered, isAnyMenuOpen]);
+  }, [isTaskHovered, isAnyMenuOpen, isRowBeingDragged]);
 
   const closeMenus = () => {
     setActionsMenuOpen(false);
@@ -369,10 +397,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
   };
 
   const toggleExpanded = () => {
-    if (!isParent) {
+    if (!isParent || isRowBeingDragged) {
       return;
     }
-
     setExpanded((previous) => !previous);
   };
 
@@ -540,7 +567,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
         <div
           ref={setDraggableNodeRef}
-          style={draggableStyle}
+          style={{ ...draggableStyle, touchAction: "none" }}
           {...attributes}
           {...listeners}
           className={`flex flex-col
@@ -585,10 +612,51 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   taskHeaderRowRef.current = node;
                   setDropInsideNodeRef(node);
                 }}
-                onPointerEnter={() => setIsTaskHovered(true)}
+                onPointerEnter={() => {
+                  // On PC, hovering shows controls, but not during drag
+                  if (
+                    !isRowBeingDragged &&
+                    typeof window !== "undefined" &&
+                    !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                  ) {
+                    setIsTaskHovered(true);
+                  }
+                }}
                 onPointerLeave={() => {
-                  if (!isAnyMenuOpen) {
+                  if (!isRowBeingDragged && !isAnyMenuOpen) {
                     setIsTaskHovered(false);
+                  }
+                }}
+                onClick={() => {
+                  // On PC: click toggles expand/collapse, but not during drag
+                  if (
+                    typeof window !== "undefined" &&
+                    !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                  ) {
+                    if (isParent && !isRowBeingDragged) toggleExpanded();
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  // On mobile: touch shows menu/controls, but not if chevron was touched
+                  if (
+                    typeof window !== "undefined" &&
+                    ("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                  ) {
+                    // If chevron was touched, do nothing (chevron handles expand/collapse)
+                    const chevron = e.currentTarget.querySelector(
+                      "[data-task-chevron]",
+                    );
+                    if (
+                      chevron &&
+                      e.target instanceof Node &&
+                      chevron.contains(e.target)
+                    ) {
+                      return;
+                    }
+                    // Otherwise, show row controls and open group menu
+                    setIsTaskHovered(true);
+                    updateActionsMenuPosition();
+                    setActionsMenuOpen(true);
                   }
                 }}
                 className={`flex items-center justify-between text-ellipsis transition-colors duration-250 ease-out ${isParent && expanded && "pb-1"}`}
@@ -614,9 +682,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
                       <button
                         className="rounded squircle squircle-lg bg-transparent p-1 transition-colors hover:bg-primary/15"
                         aria-label="Task group options"
-                        onPointerDown={(event) => {
+                        onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
+                          // On mobile, don't close menu right after opening
                           toggleActionsMenu();
                         }}
                       >
@@ -687,12 +756,26 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           onClick={() => {
                             if (isActive) {
                               stopActiveTask();
-                              closeMenus();
+                              // Only close menu on desktop
+                              if (
+                                typeof window !== "undefined" &&
+                                !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                              ) {
+                                if (actionsMenuOpen || elementMenuOpen !== null)
+                                  setActionsMenuOpen(false);
+                              }
                               return;
                             }
 
                             startTask(taskID);
-                            closeMenus();
+                            // Only close menu on desktop
+                            if (
+                              typeof window !== "undefined" &&
+                              !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                            ) {
+                              if (actionsMenuOpen || elementMenuOpen !== null)
+                                setActionsMenuOpen(false);
+                            }
                           }}
                           aria-label={isActive ? "Stop task" : "Start task"}
                         >
@@ -709,10 +792,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   </div>
                 </div>
 
-                <span
-                  className="w-full truncate pl-0.5 text-left"
-                  onClick={toggleExpanded}
-                >
+                <span className="w-full truncate pl-0.5 text-left">
                   {isFinished && <span className="mr-1">• • • •</span>}
                   {editMode === "name" ? (
                     <span
@@ -833,7 +913,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={toggleExpanded}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isRowBeingDragged) toggleExpanded();
+                        }}
+                        data-task-chevron
                         className="relative p-1 rounded squircle squircle-lg transition-colors shrink-0"
                         aria-label={
                           expanded ? "Collapse subtasks" : "Expand subtasks"
@@ -856,7 +940,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
               </div>
 
               <AnimatePresence>
-                {isParent && expanded && (
+                {isParent && expanded && !isRowBeingDragged && (
                   <motion.div
                     {...MOTION_PROPS}
                     className="flex flex-col pl-3 gap-1"

@@ -8,6 +8,7 @@ import {
   MeasuringStrategy,
   PointerSensor,
   pointerWithin,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -75,6 +76,11 @@ export default function TaskBar() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 2,
+      },
+    }),
+    useSensor(TouchSensor, {
       activationConstraint: {
         distance: 2,
       },
