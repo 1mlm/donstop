@@ -11,9 +11,9 @@ const CREDIT_LINK_CLASS =
   "inline-flex items-center gap-1.5 rounded-full squircle squircle-full border border-accent/60 bg-card px-2 py-0.5 select-none transition-opacity duration-75 hover:opacity-80";
 
 const TOP_CONTROLS = [
+  TrashButton,
   HistoryMenu,
   GoogleCalendarControls,
-  TrashButton,
   SettingsButton,
 ] as const satisfies readonly ComponentType[];
 

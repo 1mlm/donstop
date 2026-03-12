@@ -65,6 +65,8 @@ export default function HistoryMenu() {
               variant="outline"
               size="sm"
               className="rounded-full squircle squircle-full px-3"
+              disabled
+              aria-label="History"
             >
               <Icon icon={NewsIcon} />
               Empty History
