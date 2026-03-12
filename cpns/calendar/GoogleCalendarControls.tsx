@@ -14,6 +14,7 @@ import {
   Play,
   RedoIcon,
   StopIcon,
+  UnavailableIcon,
 } from "@hugeicons/core-free-icons";
 import { googleLogout } from "@react-oauth/google";
 import type { MouseEvent as ReactMouseEvent } from "react";
@@ -66,7 +67,10 @@ import {
   TooltipTrigger,
 } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
-import { isGoogleCalendarConfigured } from "./GoogleCalendarProvider";
+import {
+  GOOGLE_CALENDAR_CLIENT_ID_ENV_KEY,
+  isGoogleCalendarConfigured,
+} from "./GoogleCalendarProvider";
 
 const CREATE_CALENDAR_VALUE = "__create_calendar__";
 const DEFAULT_NEW_CALENDAR_NAME = "DonStop";
@@ -139,15 +143,37 @@ function splitEventSummaryAndCalendar(summary?: string | null) {
 export default function GoogleCalendarControls() {
   if (!isGoogleCalendarConfigured()) {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        disabled
-        className="rounded-full squircle squircle-full px-3"
-      >
-        <Icon icon={Appointment01Icon} />
-        Integrate Google Calendar
-      </Button>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full squircle squircle-full px-3"
+          >
+            <Icon icon={UnavailableIcon} />
+            Google Calendar not available
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" className="w-80 max-w-[calc(100vw-2rem)]">
+          <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+            <p className="font-medium text-foreground">
+              Google Calendar integration is optional.
+            </p>
+            <p>
+              No{" "}
+              <span className="font-mono">
+                {GOOGLE_CALENDAR_CLIENT_ID_ENV_KEY}
+              </span>{" "}
+              was found.
+            </p>
+            <p>
+              Add it in <span className="font-mono">.env.local</span> only if
+              you want Calendar sync, or keep using the app normally without it.
+            </p>
+            <p>See the project README for setup details.</p>
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   }
 
