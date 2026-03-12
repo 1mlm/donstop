@@ -1,11 +1,12 @@
 import { PaintBoardIcon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/cpns/Icon";
-import {
-  type PaletteColor,
-  TAILWIND_500_COLORS,
-} from "./settings.constants";
+import { type PaletteColor, TAILWIND_500_COLORS } from "./settings.constants";
 import { COLOR_PREVIEW_TEXT_CLASS } from "./settings.styles";
-import { applyPrimaryColor, hexToOklch, writeStoredPrimaryColor } from "./settings.utils";
+import {
+  applyPrimaryColor,
+  hexToOklch,
+  writeStoredPrimaryColor,
+} from "./settings.utils";
 
 export function PrimaryColorSection({
   primaryColor,
@@ -28,8 +29,12 @@ export function PrimaryColorSection({
           <p className="text-xs font-medium leading-none whitespace-nowrap">
             Primary color
           </p>
-          <span className={COLOR_PREVIEW_TEXT_CLASS} style={{ color: primaryColor }}>
-            {selectedPrimaryColor?.name ?? "Custom"} - {primaryColor} - {hexToOklch(primaryColor)}
+          <span
+            className={COLOR_PREVIEW_TEXT_CLASS}
+            style={{ color: primaryColor }}
+          >
+            {selectedPrimaryColor?.name ?? "Custom"} - {primaryColor} -{" "}
+            {hexToOklch(primaryColor)}
           </span>
         </div>
       </div>

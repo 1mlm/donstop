@@ -1,7 +1,4 @@
-import {
-  ArrowUpRight01Icon,
-  Github,
-} from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon, Github } from "@hugeicons/core-free-icons";
 import type { ComponentType, ReactNode } from "react";
 import GoogleCalendarControls from "@/cpns/calendar/GoogleCalendarControls";
 import HistoryMenu from "@/cpns/history/HistoryMenu";
@@ -61,13 +58,7 @@ export function AppTopBar() {
   );
 }
 
-function CreditLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: ReactNode;
-}) {
+function CreditLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
       href={href}

@@ -25,7 +25,6 @@ function ActiveTaskState({
 }: {
   activeTaskSummary: ActiveTaskSummary;
 }) {
-
   return (
     <motion.div
       {...MOTION_PROPS}
@@ -38,7 +37,10 @@ function ActiveTaskState({
           className="mb-1 flex items-center gap-1 text-sm text-muted-foreground"
         >
           {activeTaskSummary.parentPath.map((parentTask) => (
-            <span key={parentTask.key} className="inline-flex items-center gap-1">
+            <span
+              key={parentTask.key}
+              className="inline-flex items-center gap-1"
+            >
               <span>{parentTask.label}</span>
               <Icon icon={ArrowRight01Icon} className="size-3.5" />
             </span>
@@ -48,11 +50,17 @@ function ActiveTaskState({
       <h2 key="active-label" className="text-3xl text-muted-foreground">
         {activeTaskSummary.activeTask.label}
       </h2>
-      <div key="active-time-row" className="mt-2 flex items-center justify-center gap-3">
+      <div
+        key="active-time-row"
+        className="mt-2 flex items-center justify-center gap-3"
+      >
         <p key="active-stored-time" className="text-sm text-muted-foreground">
           {formatElapsed(activeTaskSummary.storedSeconds)} +
         </p>
-        <h1 key="active-running-time" className="text-9xl font-bold leading-none">
+        <h1
+          key="active-running-time"
+          className="text-9xl font-bold leading-none"
+        >
           {formatElapsed(activeTaskSummary.runningSeconds)}
         </h1>
       </div>

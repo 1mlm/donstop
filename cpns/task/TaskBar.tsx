@@ -1,23 +1,20 @@
 import {
+  type CollisionDetection,
   closestCenter,
   DndContext,
   type DragEndEvent,
   DragOverlay,
   type DragStartEvent,
+  MeasuringStrategy,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import {
-  ChevronDown,
-  MoreIcon,
-  Play,
-  PlusSignIcon,
-} from "@hugeicons/core-free-icons";
-import { useCallback, useState } from "react";
+import { PlusSignIcon } from "@hugeicons/core-free-icons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
 import { type TaskID, useTODOStore } from "@/lib/store";
-import { formatPreviewTime } from "@/lib/util";
 import {
   InputGroup,
   InputGroupAddon,
@@ -27,9 +24,40 @@ import {
 import { Bar } from "../Bar";
 import { Icon } from "../Icon";
 import { TaskDndProvider } from "./TaskDndContext";
+import { TaskDragOverlayCard } from "./TaskDragOverlayCard";
 import TaskList from "./TaskList";
+import {
+  getDescendantsOfTask,
+  isEdgeDropContainerID,
+  isPointerInBottomSnapZone,
+  isPointerInsideBounds,
+  parseTaskDropTarget,
+} from "./task.utils";
+
+const BOTTOM_END_DROP_SNAP_PX = 220;
+const HORIZONTAL_END_DROP_SNAP_PX = 80;
+
+function isBottomEndSnapDrop({
+  bounds,
+  pointer,
+}: {
+  bounds: DOMRect;
+  pointer: { x: number; y: number };
+}) {
+  return isPointerInBottomSnapZone({
+    pointer,
+    bounds,
+    horizontalPadding: HORIZONTAL_END_DROP_SNAP_PX,
+    bottomPadding: BOTTOM_END_DROP_SNAP_PX,
+  });
+}
 
 export default function TaskBar() {
+  const taskDropAreaRef = useRef<HTMLDivElement | null>(null);
+  const lastPointerCoordinatesRef = useRef<{ x: number; y: number } | null>(
+    null,
+  );
+  const isPointerWithinDropAreaRef = useRef(true);
   const rootTaskIDs = useTODOStore(
     useShallow((state) => state.getRootTaskIDs()),
   );
@@ -37,14 +65,16 @@ export default function TaskBar() {
   const moveTask = useTODOStore((state) => state.moveTask);
   const getTaskFromID = useTODOStore((state) => state.getTaskFromID);
   const getTaskChildrenIDs = useTODOStore((state) => state.getTaskChildrenIDs);
+  const allTasks = useTODOStore((state) => state.tasks);
   const [draggingTaskID, setDraggingTaskID] = useState<TaskID | null>(null);
+  const [isPointerWithinDropArea, setIsPointerWithinDropArea] = useState(true);
   const [newTaskLabel, setNewTaskLabel] = useState("");
   const canSubmitNewTask = newTaskLabel.trim().length > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 6,
+        distance: 2,
       },
     }),
   );
@@ -53,6 +83,79 @@ export default function TaskBar() {
   const draggingTaskChildrenCount = draggingTaskID
     ? getTaskChildrenIDs(draggingTaskID).length
     : 0;
+  const draggingDescendantIDs = useMemo(
+    () => getDescendantsOfTask(allTasks, draggingTaskID),
+    [allTasks, draggingTaskID],
+  );
+  const dndContextValue = useMemo(
+    () => ({ draggingTaskID, draggingDescendantIDs }),
+    [draggingTaskID, draggingDescendantIDs],
+  );
+
+  useEffect(() => {
+    if (draggingTaskID) {
+      document.body.classList.add("task-dragging");
+    } else {
+      document.body.classList.remove("task-dragging");
+    }
+
+    return () => {
+      document.body.classList.remove("task-dragging");
+    };
+  }, [draggingTaskID]);
+
+  const boundedCollisionDetection = useCallback<CollisionDetection>((args) => {
+    const bounds = taskDropAreaRef.current?.getBoundingClientRect();
+    const pointer = args.pointerCoordinates;
+
+    if (!bounds || !pointer) {
+      return closestCenter(args);
+    }
+
+    lastPointerCoordinatesRef.current = { x: pointer.x, y: pointer.y };
+
+    const isPointerInsideStrictBounds = isPointerInsideBounds(pointer, bounds);
+
+    const canSnapToEndOutsideBottom = isBottomEndSnapDrop({
+      bounds,
+      pointer,
+    });
+
+    const isPointerWithinDropArea =
+      isPointerInsideStrictBounds || canSnapToEndOutsideBottom;
+
+    if (isPointerWithinDropAreaRef.current !== isPointerWithinDropArea) {
+      isPointerWithinDropAreaRef.current = isPointerWithinDropArea;
+      setIsPointerWithinDropArea(isPointerWithinDropArea);
+    }
+
+    if (!isPointerInsideStrictBounds) {
+      return [];
+    }
+
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+      return pointerCollisions;
+    }
+
+    const edgeDropContainers = args.droppableContainers.filter((container) => {
+      return isEdgeDropContainerID(String(container.id));
+    });
+
+    if (edgeDropContainers.length > 0) {
+      const edgeCollisions = closestCenter({
+        ...args,
+        droppableContainers: edgeDropContainers,
+      });
+
+      if (edgeCollisions.length > 0) {
+        return edgeCollisions;
+      }
+    }
+
+    // Fallback keeps drop feeling forgiving when pointer is near slim drop rails.
+    return closestCenter(args);
+  }, []);
 
   const submitNewTask = useCallback(() => {
     const label = newTaskLabel.trim();
@@ -69,30 +172,48 @@ export default function TaskBar() {
   }, [createTask, newTaskLabel]);
 
   const handleDragStart = (event: DragStartEvent) => {
+    lastPointerCoordinatesRef.current = null;
+    isPointerWithinDropAreaRef.current = true;
+    setIsPointerWithinDropArea(true);
     setDraggingTaskID(String(event.active.id));
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const finalizeDrag = () => {
+    isPointerWithinDropAreaRef.current = true;
+    setIsPointerWithinDropArea(true);
     setDraggingTaskID(null);
+  };
 
+  const handleDragEnd = (event: DragEndEvent) => {
     const sourceTaskID = String(event.active.id);
     const overID = event.over ? String(event.over.id) : "";
-    const dropTargets = [
-      { prefix: "drop-before:", placement: "before" as const },
-      { prefix: "drop-after:", placement: "after" as const },
-      { prefix: "drop-inside:", placement: "inside" as const },
-    ];
+    const dropTarget = parseTaskDropTarget(overID);
 
-    const matchedDropTarget = dropTargets.find(({ prefix }) =>
-      overID.startsWith(prefix),
-    );
+    if (!dropTarget) {
+      const bounds = taskDropAreaRef.current?.getBoundingClientRect();
+      const pointer = lastPointerCoordinatesRef.current;
+      const lastRootTaskID = rootTaskIDs.at(-1);
+      const shouldSnapToListEnd = Boolean(
+        bounds &&
+          pointer &&
+          lastRootTaskID &&
+          isBottomEndSnapDrop({ bounds, pointer }),
+      );
 
-    if (!matchedDropTarget) {
+      if (
+        shouldSnapToListEnd &&
+        lastRootTaskID &&
+        lastRootTaskID !== sourceTaskID
+      ) {
+        moveTask(sourceTaskID, lastRootTaskID, "after");
+      }
+
+      finalizeDrag();
       return;
     }
 
-    const targetTaskID = overID.replace(matchedDropTarget.prefix, "");
-    moveTask(sourceTaskID, targetTaskID, matchedDropTarget.placement);
+    moveTask(sourceTaskID, dropTarget.targetTaskID, dropTarget.placement);
+    finalizeDrag();
   };
 
   const handleTaskInputClick = () => {
@@ -102,15 +223,20 @@ export default function TaskBar() {
   };
 
   return (
-    <TaskDndProvider value={{ draggingTaskID }}>
+    <TaskDndProvider value={dndContextValue}>
       <DndContext
-        collisionDetection={closestCenter}
+        collisionDetection={boundedCollisionDetection}
+        measuring={{
+          droppable: {
+            strategy: MeasuringStrategy.Always,
+          },
+        }}
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        onDragCancel={() => setDraggingTaskID(null)}
+        onDragCancel={finalizeDrag}
       >
-        <Bar className="p-3 overflow-y-auto gap-1">
+        <Bar ref={taskDropAreaRef} className="p-3 overflow-y-auto gap-1">
           <div className="mb-1">
             <InputGroup className="h-9 rounded-2xl squircle squircle-2xl border-dashed border-border/75 bg-muted/18 transition-colors focus-within:border-primary/50 focus-within:bg-background/70">
               <InputGroupAddon
@@ -146,38 +272,14 @@ export default function TaskBar() {
           <TaskList taskIDs={rootTaskIDs} />
         </Bar>
 
-        <DragOverlay
-          dropAnimation={{
-            duration: 220,
-            easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-          }}
-        >
+        <DragOverlay dropAnimation={null}>
           {draggingTask ? (
-            <div className="pointer-events-none min-w-56 rounded-2xl squircle squircle-2xl border border-white/70 bg-primary/92 px-2 py-0.5 pr-2.5 text-primary-foreground backdrop-blur-[1px]">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex shrink-0 items-center gap-0.5 opacity-85">
-                  <span className="rounded squircle squircle-lg p-1">
-                    <Icon icon={MoreIcon} className="size-4" />
-                  </span>
-                  <span className="rounded squircle squircle-lg p-1">
-                    <Icon icon={Play} className="size-4" />
-                  </span>
-                </div>
-
-                <span className="min-w-0 flex-1 truncate pl-0.5 text-left text-sm font-medium">
-                  {draggingTask.label}
-                  <span className="pl-1 text-xs text-primary-foreground/60">
-                    {formatPreviewTime(draggingTask.time)}
-                  </span>
-                </span>
-
-                {draggingTaskChildrenCount > 0 ? (
-                  <span className="shrink-0 rounded squircle squircle-lg p-1 opacity-90">
-                    <Icon icon={ChevronDown} className="size-4 scale-125" />
-                  </span>
-                ) : null}
-              </div>
-            </div>
+            <TaskDragOverlayCard
+              label={draggingTask.label}
+              storedSeconds={draggingTask.time}
+              childrenCount={draggingTaskChildrenCount}
+              isInvalidDrop={!isPointerWithinDropArea}
+            />
           ) : null}
         </DragOverlay>
       </DndContext>

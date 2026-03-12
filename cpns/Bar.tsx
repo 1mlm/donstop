@@ -17,5 +17,4 @@ export const Bar = forwardRef<
       {children}
     </motion.div>
   );
-}
-);
+});

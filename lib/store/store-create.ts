@@ -52,6 +52,32 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   hasActiveChildRecursive: (taskID: TaskID) => boolean;
 };
 
+function collectDescendantsByParent(
+  tasks: TaskObj[],
+  rootID: string,
+): string[] {
+  const descendants: string[] = [];
+  const stack = [rootID];
+
+  while (stack.length > 0) {
+    const currentID = stack.pop();
+    if (!currentID) {
+      continue;
+    }
+
+    for (const task of tasks) {
+      if (task.parentId !== currentID) {
+        continue;
+      }
+
+      descendants.push(task.id);
+      stack.push(task.id);
+    }
+  }
+
+  return descendants;
+}
+
 export const createTODOStoreBase = (tasks: TaskObj[]) =>
   create<TODOStoreState>()(
     persist(
@@ -625,18 +651,10 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             return false;
           }
 
-          const collectDescendants = (rootID: string): string[] => {
-            const direct = currentTasks
-              .filter((item) => item.parentId === rootID)
-              .map((item) => item.id);
-
-            return direct.flatMap((childID) => [
-              childID,
-              ...collectDescendants(childID),
-            ]);
-          };
-
-          const descendantIDs = collectDescendants(taskID);
+          const descendantIDs = collectDescendantsByParent(
+            currentTasks,
+            taskID,
+          );
 
           if (descendantIDs.includes(targetTaskID)) {
             return false;
@@ -742,18 +760,10 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const task = currentTasks.find((item) => item.id === taskID);
           if (!task) return false;
 
-          const collectDescendants = (rootID: string): string[] => {
-            const direct = currentTasks
-              .filter((item) => item.parentId === rootID)
-              .map((item) => item.id);
-
-            return direct.flatMap((childID) => [
-              childID,
-              ...collectDescendants(childID),
-            ]);
-          };
-
-          const subtreeIDs = [taskID, ...collectDescendants(taskID)];
+          const subtreeIDs = [
+            taskID,
+            ...collectDescendantsByParent(currentTasks, taskID),
+          ];
 
           if (activeSession && subtreeIDs.includes(activeSession.taskId)) {
             return false;

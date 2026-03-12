@@ -120,7 +120,7 @@
 
   body.custom-cursor-enabled {
     cursor:
-      url("/normal.svg?v=3") 4 4,
+      url("/normal.svg?v=4") 8 3,
       default;
   }
 
@@ -134,7 +134,7 @@
   body.custom-cursor-enabled .cursor-pointer,
   body.custom-cursor-enabled .hover-hand {
     cursor:
-      url("/pointer.svg?v=3") 6 6,
+      url("/pointer.svg?v=4") 7 4,
       pointer;
   }
 }
@@ -142,19 +142,38 @@
 @layer components {
   body.custom-cursor-enabled .cursor-default-custom {
     cursor:
-      url("/normal.svg?v=3") 4 4,
+      url("/normal.svg?v=4") 8 3,
       default;
   }
 
   body.custom-cursor-enabled .cursor-pointer-custom {
     cursor:
-      url("/pointer.svg?v=3") 6 6,
+      url("/pointer.svg?v=4") 7 4,
       pointer;
   }
 
   body.custom-cursor-enabled .cursor-info-custom {
     cursor:
-      url("/info.svg?v=3") 6 6,
+      url("/info.svg?v=4") 8 3,
       help;
+  }
+
+  body.custom-cursor-enabled .cursor-grab-custom {
+    cursor:
+      url("/hand.svg?v=2") 13 3,
+      grab;
+  }
+
+  body.custom-cursor-enabled .cursor-grabbing-custom {
+    cursor:
+      url("/grab.svg?v=2") 12 4,
+      grabbing;
+  }
+
+  body.custom-cursor-enabled.task-dragging,
+  body.custom-cursor-enabled.task-dragging * {
+    cursor:
+      url("/grab.svg?v=2") 12 4,
+      grabbing;
   }
 }

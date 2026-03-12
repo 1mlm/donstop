@@ -9,11 +9,6 @@ import {
 import { googleLogout } from "@react-oauth/google";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  clearStoredGoogleCalendarAuth,
-  GOOGLE_CALENDAR_RESET_EVENT,
-} from "@/lib/calendar";
-import { useTODOStore } from "@/lib/store";
-import {
   DEFAULT_PRIMARY_COLOR,
   SETTINGS_RESET_EVENT,
 } from "@/cpns/settings/settings.constants";
@@ -23,6 +18,11 @@ import {
   writeStoredCursorEnabled,
   writeStoredPrimaryColor,
 } from "@/cpns/settings/settings.utils";
+import {
+  clearStoredGoogleCalendarAuth,
+  GOOGLE_CALENDAR_RESET_EVENT,
+} from "@/lib/calendar";
+import { useTODOStore } from "@/lib/store";
 import {
   AlertDialog,
   AlertDialogAction,

@@ -13,9 +13,9 @@ export default function TaskList({ taskIDs }: { taskIDs: TaskID[] }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 6, scale: 0.98, height: 0, marginTop: 0 }}
           transition={{
-            layout: { type: "spring", stiffness: 520, damping: 38, mass: 0.55 },
-            duration: 0.14,
-            ease: "easeOut",
+            layout: { type: "spring", stiffness: 320, damping: 34, mass: 0.85 },
+            duration: 0.2,
+            ease: [0.16, 1, 0.3, 1],
           }}
         >
           <Task taskID={taskID} />

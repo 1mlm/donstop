@@ -15,14 +15,17 @@ import { Switch } from "@/shadcn/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
 import { PrimaryColorSection } from "./PrimaryColorSection";
-import { useCursorEnabledEffect, useSettingsBootEffect } from "./settings.effects";
+import { SettingRow } from "./SettingRow";
+import {
+  useCursorEnabledEffect,
+  useSettingsBootEffect,
+} from "./settings.effects";
 import {
   SETTINGS_PANEL_CLASS,
   SETTINGS_SECTION_STACK_CLASS,
   SETTINGS_TRIGGER_CLASS,
 } from "./settings.styles";
 import { writeStoredCursorEnabled } from "./settings.utils";
-import { SettingRow } from "./SettingRow";
 
 export default function SettingsButton() {
   const [isOpen, setIsOpen] = useState(false);

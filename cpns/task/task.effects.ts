@@ -1,5 +1,7 @@
-import { useEffect, type MutableRefObject, type RefObject } from "react";
+import { type MutableRefObject, type RefObject, useEffect } from "react";
 import type { TaskID } from "@/lib/store";
+
+const expandedBeforeSelfDrag = new Map<TaskID, boolean>();
 
 export function useTaskAutoExpandOnChildrenEffect({
   childrenCount,
@@ -26,25 +28,34 @@ export function useTaskCollapseWhileDraggingEffect({
   taskID,
   expanded,
   setExpanded,
-  reopenAfterDragRef,
 }: {
   draggingTaskID: TaskID | null;
   taskID: TaskID;
   expanded: boolean;
   setExpanded: (expanded: boolean) => void;
-  reopenAfterDragRef: MutableRefObject<boolean>;
 }) {
   useEffect(() => {
-    if (draggingTaskID === taskID && expanded) {
-      setExpanded(false);
-      reopenAfterDragRef.current = true;
+    if (draggingTaskID === taskID) {
+      if (!expandedBeforeSelfDrag.has(taskID)) {
+        expandedBeforeSelfDrag.set(taskID, expanded);
+      }
+
+      if (expanded) {
+        setExpanded(false);
+      }
+
+      return;
     }
 
-    if (draggingTaskID !== taskID && reopenAfterDragRef.current) {
+    const wasExpandedBeforeDrag = expandedBeforeSelfDrag.get(taskID);
+    if (wasExpandedBeforeDrag && !expanded) {
       setExpanded(true);
-      reopenAfterDragRef.current = false;
     }
-  }, [draggingTaskID, expanded, taskID, setExpanded, reopenAfterDragRef]);
+
+    if (wasExpandedBeforeDrag !== undefined) {
+      expandedBeforeSelfDrag.delete(taskID);
+    }
+  }, [draggingTaskID, expanded, taskID, setExpanded]);
 }
 
 export function useTaskEditValueSyncEffect({

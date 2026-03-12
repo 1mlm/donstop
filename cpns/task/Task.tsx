@@ -22,7 +22,7 @@ import {
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useShallow } from "zustand/shallow";
 import { useTaskRunningSeconds } from "@/lib/live-task";
@@ -36,6 +36,8 @@ import {
   TooltipTrigger,
 } from "@/shadcn/ui/tooltip";
 import { type HugeIcon, Icon } from "../Icon";
+import { useTaskDndContext } from "./TaskDndContext";
+import TaskList from "./TaskList";
 import {
   useActionsMenuViewportSyncEffect,
   useTaskAutoExpandOnChildrenEffect,
@@ -44,16 +46,14 @@ import {
   useTaskEditValueSyncEffect,
   useTaskTimeoutCleanupEffect,
 } from "./task.effects";
-import {
-  getSiblingIDs,
-  getTaskDurationLabel,
-  isDescendantDropTarget,
-} from "./task.utils";
-import { useTaskDndContext } from "./TaskDndContext";
-import TaskList from "./TaskList";
+import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
+
+const taskExpandedState = new Map<TaskID, boolean>();
 
 export function Task({ taskID }: { taskID: TaskID }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(
+    () => taskExpandedState.get(taskID) ?? false,
+  );
   const [isTaskHovered, setIsTaskHovered] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
@@ -105,13 +105,15 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const isFavorite = task?.isFavorite ?? false;
   const taskLabel = task?.label ?? "";
   const hasActiveChild = hasActiveChildRecursive(taskID);
+  const { draggingTaskID, draggingDescendantIDs } = useTaskDndContext();
   const shouldShowRowControls =
-    isTaskHovered || actionsMenuOpen || copyMenuOpen;
+    (!draggingTaskID && isTaskHovered) || actionsMenuOpen || copyMenuOpen;
   const isAnyMenuOpen = actionsMenuOpen || copyMenuOpen;
-  const { draggingTaskID } = useTaskDndContext();
-  const allTasks = useTODOStore((state) => state.tasks);
-  const reopenAfterDragRef = useRef(false);
   const prevChildrenCountRef = useRef(childrenIDs.length);
+
+  useEffect(() => {
+    taskExpandedState.set(taskID, expanded);
+  }, [taskID, expanded]);
 
   useTaskAutoExpandOnChildrenEffect({
     childrenCount: childrenIDs.length,
@@ -120,20 +122,13 @@ export function Task({ taskID }: { taskID: TaskID }) {
     prevChildrenCountRef,
   });
 
-  const isDescendantTarget = useMemo(() => {
-    return isDescendantDropTarget({
-      allTasks,
-      draggingTaskID,
-      taskID,
-    });
-  }, [allTasks, draggingTaskID, taskID]);
+  const isDescendantTarget = useMemo(
+    () => Boolean(draggingTaskID) && draggingDescendantIDs.has(taskID),
+    [draggingTaskID, draggingDescendantIDs, taskID],
+  );
 
   const isDropDisabled = draggingTaskID === taskID || isDescendantTarget;
   const showDropTargets = Boolean(draggingTaskID) && !isDropDisabled;
-
-  const siblingParentID = task?.parentId;
-  const siblingIDs = getSiblingIDs(allTasks, siblingParentID);
-  const isFirstSibling = siblingIDs[0] === taskID;
 
   const {
     attributes,
@@ -146,25 +141,33 @@ export function Task({ taskID }: { taskID: TaskID }) {
     disabled: isEditing,
   });
 
+  const isSourceOfActiveDrag = draggingTaskID === taskID;
+  const isRowBeingDragged = isDragging || isSourceOfActiveDrag;
+
   const { setNodeRef: setDropBeforeNodeRef, isOver: isOverBefore } =
     useDroppable({
-      id: `drop-before:${taskID}`,
+      id: getTaskDropTargetID(taskID, "before"),
       disabled: isDropDisabled,
     });
   const { setNodeRef: setDropAfterNodeRef, isOver: isOverAfter } = useDroppable(
     {
-      id: `drop-after:${taskID}`,
+      id: getTaskDropTargetID(taskID, "after"),
       disabled: isDropDisabled,
     },
   );
   const { setNodeRef: setDropInsideNodeRef, isOver: isOverInside } =
     useDroppable({
-      id: `drop-inside:${taskID}`,
+      id: getTaskDropTargetID(taskID, "inside"),
       disabled: isDropDisabled,
     });
 
+  const showBeforeGap = showDropTargets && isOverBefore;
+  const showAfterGap = showDropTargets && isOverAfter;
+
   const draggableStyle = {
-    transform: isDragging ? undefined : CSS.Translate.toString(transform),
+    transform: isRowBeingDragged
+      ? undefined
+      : CSS.Translate.toString(transform),
     opacity: 1,
   };
 
@@ -173,7 +176,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
     taskID,
     expanded,
     setExpanded,
-    reopenAfterDragRef,
   });
 
   useTaskEditValueSyncEffect({ taskLabel, setEditValue });
@@ -316,20 +318,31 @@ export function Task({ taskID }: { taskID: TaskID }) {
     storedSeconds: task.time,
     runningSeconds,
   });
+  const isInsideDropActive = showDropTargets && isOverInside && !isDragging;
+  const activeTaskPaddingClass = isInsideDropActive
+    ? "py-2 px-2 pr-2.5"
+    : "py-0.5 px-2 pr-2.5";
+  const finishedTaskPaddingClass = isInsideDropActive
+    ? "py-1.5 px-1"
+    : "p-0.5 px-1";
 
   if (isFinished) {
     return (
       <TooltipProvider>
-        <div className="relative flex flex-col overflow-visible">
-          {!isDragging && isFirstSibling ? (
+        <div
+          className={`relative flex flex-col overflow-visible transition-[padding] duration-150 ease-out ${
+            showBeforeGap ? "pt-2" : "pt-0"
+          } ${showAfterGap ? "pb-2" : "pb-0"}`}
+        >
+          {!isRowBeingDragged ? (
             <div
               ref={setDropBeforeNodeRef}
-              className="pointer-events-none absolute inset-x-0 -top-1.5 z-20 h-3"
+              className="pointer-events-none absolute inset-x-0 -top-3.5 z-20 h-7"
             >
               <div
                 className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
                   showDropTargets && isOverBefore
-                    ? "h-1 opacity-100"
+                    ? "h-2.5 opacity-100"
                     : "h-px scale-x-75 opacity-0"
                 }`}
               />
@@ -344,9 +357,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
             style={draggableStyle}
             {...attributes}
             {...listeners}
-            className="group flex items-center gap-1 py-0.5 select-none transition-[opacity,filter] duration-200"
+            className={`group flex items-center gap-1 select-none transition-[padding,opacity,filter] duration-200 ${
+              isInsideDropActive ? "py-1.5" : "py-0.5"
+            } ${isRowBeingDragged ? "cursor-grabbing-custom" : "cursor-grab-custom"}`}
           >
-            {isDragging ? (
+            {isRowBeingDragged ? (
               <TaskDragPlaceholder compact />
             ) : (
               <>
@@ -393,12 +408,12 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
           <div
             ref={setDropAfterNodeRef}
-            className="pointer-events-none absolute inset-x-0 -bottom-1.5 z-20 h-3"
+            className="pointer-events-none absolute inset-x-0 -bottom-3.5 z-20 h-7"
           >
             <div
               className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
                 showDropTargets && isOverAfter
-                  ? "h-1 opacity-100"
+                  ? "h-2.5 opacity-100"
                   : "h-px scale-x-75 opacity-0"
               }`}
             />
@@ -410,16 +425,20 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
   return (
     <TooltipProvider>
-      <div className="relative flex flex-col overflow-visible">
-        {!isDragging && isFirstSibling ? (
+      <div
+        className={`relative flex flex-col overflow-visible transition-[padding] duration-150 ease-out ${
+          showBeforeGap ? "pt-2" : "pt-0"
+        } ${showAfterGap ? "pb-2" : "pb-0"}`}
+      >
+        {!isRowBeingDragged ? (
           <div
             ref={setDropBeforeNodeRef}
-            className="pointer-events-none absolute inset-x-0 -top-1.5 z-20 h-3"
+            className="pointer-events-none absolute inset-x-0 -top-3.5 z-20 h-7"
           >
             <div
               className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
                 showDropTargets && isOverBefore
-                  ? "h-1 opacity-100"
+                  ? "h-2.5 opacity-100"
                   : "h-px scale-x-75 opacity-0"
               }`}
             />
@@ -436,23 +455,24 @@ export function Task({ taskID }: { taskID: TaskID }) {
         isolate
         ${isAnyMenuOpen ? "z-[200]" : "z-0 hover:z-30"}
         select-none
-        transition-[transform,opacity,filter,border-color,background-color]
-        duration-200
+          transition-[padding,transform,opacity,filter,border-color,background-color,color,box-shadow]
+        duration-300 ease-out
         border
         rounded-2xl squircle squircle-2xl
-        ${isFinished ? "p-0.5 px-1" : "py-0.5 px-2 pr-2.5"}
+          ${isFinished ? finishedTaskPaddingClass : activeTaskPaddingClass}
         ${expanded && "rounded-tl-md pb-1"}
         ${
           isActive
-            ? "bg-primary/50 text-primary-foreground shadow-xl font-bold"
+            ? "bg-primary/50 text-primary-foreground shadow-lg font-semibold"
             : isFinished
               ? "bg-muted border-dashed opacity-60"
               : "bg-primary/5 hover:bg-primary/7 hover:border-primary/25"
         }
         ${isOverInside ? "border-primary/55 bg-primary/8" : ""}
-        ${isDragging ? "border-border/50 bg-muted/20" : ""}`}
+        ${isRowBeingDragged ? "border-border/50 bg-muted/20" : ""}
+        ${isRowBeingDragged ? "cursor-grabbing-custom" : "cursor-grab-custom"}`}
         >
-          {!isDragging && isFavorite && (
+          {!isRowBeingDragged && isFavorite && (
             <div className="absolute -top-2 -right-1 z-10 rotate-12">
               <Icon
                 icon={Favorite}
@@ -463,7 +483,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
             </div>
           )}
 
-          {isDragging ? (
+          {isRowBeingDragged ? (
             <TaskDragPlaceholder />
           ) : (
             <>
@@ -471,15 +491,15 @@ export function Task({ taskID }: { taskID: TaskID }) {
                 ref={setDropInsideNodeRef}
                 onMouseEnter={() => setIsTaskHovered(true)}
                 onMouseLeave={() => setIsTaskHovered(false)}
-                className={`flex items-center justify-between text-ellipsis ${expanded && "pb-1"}`}
+                className={`flex items-center justify-between text-ellipsis transition-colors duration-250 ease-out ${expanded && "pb-1"}`}
               >
                 <div
-                  className={`flex shrink-0 overflow-visible transition-[width,margin-right] duration-100 ease-out ${
+                  className={`flex shrink-0 overflow-visible transition-[width,margin-right] duration-180 ease-out ${
                     shouldShowRowControls ? "mr-1 w-[50px]" : "mr-0 w-0"
                   }`}
                 >
                   <div
-                    className={`flex items-center gap-0.5 origin-left transition-[opacity,transform] duration-100 ease-out ${
+                    className={`flex items-center gap-0.5 origin-left transition-[opacity,transform] duration-180 ease-out ${
                       shouldShowRowControls
                         ? "translate-x-0 scale-100 opacity-100"
                         : "-translate-x-1 scale-95 opacity-0 pointer-events-none"
@@ -811,15 +831,15 @@ export function Task({ taskID }: { taskID: TaskID }) {
           )}
         </div>
 
-        {!isDragging ? (
+        {!isRowBeingDragged ? (
           <div
             ref={setDropAfterNodeRef}
-            className="pointer-events-none absolute inset-x-0 -bottom-1.5 z-20 h-3"
+            className="pointer-events-none absolute inset-x-0 -bottom-3.5 z-20 h-7"
           >
             <div
               className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
                 showDropTargets && isOverAfter
-                  ? "h-1 opacity-100"
+                  ? "h-2.5 opacity-100"
                   : "h-px scale-x-75 opacity-0"
               }`}
             />

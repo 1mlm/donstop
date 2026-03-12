@@ -5,10 +5,12 @@ import type { TaskID } from "@/lib/store";
 
 type TaskDndContextValue = {
   draggingTaskID: TaskID | null;
+  draggingDescendantIDs: Set<TaskID>;
 };
 
 const TaskDndContext = createContext<TaskDndContextValue>({
   draggingTaskID: null,
+  draggingDescendantIDs: new Set<TaskID>(),
 });
 
 export function TaskDndProvider({

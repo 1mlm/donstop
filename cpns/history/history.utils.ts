@@ -1,6 +1,9 @@
 import type { HistoryActivityItem, TaskHistoryEntry } from "@/lib/types";
 
-export function getElapsedSecondsFromNow(isoString: string, nowMs = Date.now()) {
+export function getElapsedSecondsFromNow(
+  isoString: string,
+  nowMs = Date.now(),
+) {
   const timestamp = new Date(isoString).getTime();
 
   if (Number.isNaN(timestamp)) {

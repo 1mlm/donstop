@@ -34,7 +34,10 @@ import {
   TooltipTrigger,
 } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
-import { TASK_SYNC_STATUS_ICON, RELATIVE_TOOLTIP_THRESHOLD_SECONDS } from "./history.constants";
+import {
+  RELATIVE_TOOLTIP_THRESHOLD_SECONDS,
+  TASK_SYNC_STATUS_ICON,
+} from "./history.constants";
 import { useHistoryNowMsEffect } from "./history.effects";
 import {
   buildDisplayActivity,
