@@ -9,6 +9,7 @@ import {
   CloudIcon,
   CloudOffIcon,
   Delete02Icon,
+  HourglassIcon,
   Loading01Icon,
   Logout02Icon,
   Play,
@@ -222,6 +223,21 @@ function GoogleCalendarControlsInner() {
   const markHistoryEntriesDeleted = useTODOStore(
     (state) => state.markHistoryEntriesDeleted,
   );
+  const logCalendarConnected = useTODOStore(
+    (state) => state.logCalendarConnected,
+  );
+  const logCalendarDisconnected = useTODOStore(
+    (state) => state.logCalendarDisconnected,
+  );
+  const logCalendarSyncEnabled = useTODOStore(
+    (state) => state.logCalendarSyncEnabled,
+  );
+  const logCalendarSyncDisabled = useTODOStore(
+    (state) => state.logCalendarSyncDisabled,
+  );
+  const logCalendarTargetChanged = useTODOStore(
+    (state) => state.logCalendarTargetChanged,
+  );
 
   const {
     status,
@@ -245,6 +261,7 @@ function GoogleCalendarControlsInner() {
     ? syncError || loadError || null
     : null;
   const lastRecordedErrorRef = useRef<string | null>(null);
+  const wasLinkedRef = useRef(false);
 
   useEffect(() => {
     const savedValue = window.localStorage.getItem(
@@ -283,6 +300,18 @@ function GoogleCalendarControlsInner() {
     ]);
     lastRecordedErrorRef.current = calendarError;
   }, [calendarError]);
+
+  useEffect(() => {
+    const isLinked = status === "linked" && Boolean(auth);
+
+    if (isLinked && !wasLinkedRef.current) {
+      logCalendarConnected(
+        auth?.profile?.email || auth?.profile?.name || "Google account",
+      );
+    }
+
+    wasLinkedRef.current = isLinked;
+  }, [auth, logCalendarConnected, status]);
 
   useEffect(() => {
     if (!isRetryingConnection || status === "loading") {
@@ -805,7 +834,19 @@ function GoogleCalendarControlsInner() {
                     <Switch
                       size="sm"
                       checked={isGoogleInteractionEnabled}
-                      onCheckedChange={setIsGoogleInteractionEnabled}
+                      onCheckedChange={(checked) => {
+                        if (checked !== isGoogleInteractionEnabled) {
+                          const calendarLabel =
+                            selectedCalendar?.summary || "selected calendar";
+                          if (checked) {
+                            logCalendarSyncEnabled(calendarLabel);
+                          } else {
+                            logCalendarSyncDisabled(calendarLabel);
+                          }
+                        }
+
+                        setIsGoogleInteractionEnabled(checked);
+                      }}
                       disabled={isCalendarUiLocked}
                       aria-label="Toggle Google Calendar synchronization"
                     />
@@ -827,6 +868,11 @@ function GoogleCalendarControlsInner() {
                     aria-label="Log out"
                     disabled={isCalendarUiLocked}
                     onClick={() => {
+                      logCalendarDisconnected(
+                        auth?.profile?.email ||
+                          auth?.profile?.name ||
+                          "Google account",
+                      );
                       googleLogout();
                       disconnect();
                       setIsMenuOpen(false);
@@ -856,6 +902,20 @@ function GoogleCalendarControlsInner() {
                     setIsCreateFormOpen(true);
                     return;
                   }
+
+                  const previousCalendarName =
+                    selectedCalendar?.summary || "Unknown calendar";
+                  const nextCalendarName =
+                    auth.calendars.find((calendar) => calendar.id === value)
+                      ?.summary || "Unknown calendar";
+
+                  if (value !== targetCalendarID) {
+                    logCalendarTargetChanged(
+                      previousCalendarName,
+                      nextCalendarName,
+                    );
+                  }
+
                   setIsCreateFormOpen(false);
                   setTargetCalendarID(value);
                 }}
@@ -1222,6 +1282,8 @@ function GoogleCalendarControlsInner() {
                       <AlertDialogAction
                         variant="destructive"
                         className="text-primary-foreground"
+                        loading={isDeletingEvents}
+                        loadingIcon={HourglassIcon}
                         disabled={
                           isDeletingEvents ||
                           isLoadingCalendarEvents ||
@@ -1230,8 +1292,14 @@ function GoogleCalendarControlsInner() {
                         }
                         onClick={handleDeleteSelectedOrAll}
                       >
-                        <Icon icon={Delete02Icon} className="size-4" />
-                        {isDeletingEvents ? "Deleting..." : "Delete selected"}
+                        {!isDeletingEvents ? (
+                          <Icon icon={Delete02Icon} className="size-4" />
+                        ) : null}
+                        {isDeletingEvents
+                          ? "Deleting..."
+                          : selectedEventIDs.length === 0
+                            ? "No event selected"
+                            : "Delete selected"}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

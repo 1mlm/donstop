@@ -35,6 +35,15 @@ export default function SettingsButton() {
     (state) => state.tasks.length === 0 && state.history.length === 0,
   );
   const populateFakeData = useTODOStore((state) => state.populateFakeData);
+  const logSettingsCursorEnabled = useTODOStore(
+    (state) => state.logSettingsCursorEnabled,
+  );
+  const logSettingsCursorDisabled = useTODOStore(
+    (state) => state.logSettingsCursorDisabled,
+  );
+  const logSettingsPrimaryColorChanged = useTODOStore(
+    (state) => state.logSettingsPrimaryColorChanged,
+  );
 
   useSettingsBootEffect({ setCursorEnabled, setPrimaryColor });
   useCursorEnabledEffect(cursorEnabled);
@@ -68,6 +77,13 @@ export default function SettingsButton() {
               size="sm"
               checked={cursorEnabled}
               onCheckedChange={(checked) => {
+                if (checked !== cursorEnabled) {
+                  if (checked) {
+                    logSettingsCursorEnabled();
+                  } else {
+                    logSettingsCursorDisabled();
+                  }
+                }
                 setCursorEnabled(checked);
                 writeStoredCursorEnabled(checked);
               }}
@@ -78,6 +94,11 @@ export default function SettingsButton() {
           <PrimaryColorSection
             primaryColor={primaryColor}
             setPrimaryColor={setPrimaryColor}
+            onPrimaryColorChanged={(nextColor) => {
+              if (nextColor !== primaryColor) {
+                logSettingsPrimaryColorChanged(primaryColor, nextColor);
+              }
+            }}
           />
 
           <SettingRow icon={BlackHole01Icon} title="Erase everything">

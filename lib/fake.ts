@@ -199,6 +199,18 @@ export function createFakeHistoryData(
   const history: TaskHistoryEntry[] = [];
   const activity: HistoryActivityItem[] = [];
 
+  const pushActivity = (
+    item: Omit<HistoryActivityItem, "id" | "taskHistoryEntryID"> & {
+      taskHistoryEntryID?: string;
+    },
+  ) => {
+    activity.push({
+      id: crypto.randomUUID(),
+      taskHistoryEntryID: item.taskHistoryEntryID || crypto.randomUUID(),
+      ...item,
+    });
+  };
+
   let cursorMs = nowMs;
 
   for (let index = 0; index < sessionCount; index += 1) {
@@ -223,28 +235,123 @@ export function createFakeHistoryData(
     };
 
     history.push(historyEntry);
-    activity.push(
-      {
-        id: crypto.randomUUID(),
-        kind: "task_started",
-        createdAt: startedAt,
+    pushActivity({
+      kind: "task_started",
+      createdAt: startedAt,
+      taskLabel: task.label,
+      taskHistoryEntryID: entryId,
+    });
+
+    pushActivity({
+      kind: "task_session",
+      createdAt: endedAt,
+      taskLabel: task.label,
+      taskHistoryEntryID: entryId,
+      durationSeconds,
+      startedAt,
+      endedAt,
+    });
+
+    if (index % 3 === 0 && candidates.length > 1) {
+      const source = candidates[(index + 1) % candidates.length];
+      pushActivity({
+        kind: "task_transferred",
+        createdAt: new Date(startedAtMs + 45 * 1000).toISOString(),
         taskLabel: task.label,
-        taskHistoryEntryID: entryId,
-      },
-      {
-        id: crypto.randomUUID(),
-        kind: "task_session",
-        createdAt: endedAt,
+        sourceTaskLabel: source.label,
+        durationSeconds: 60 + (index % 4) * 45,
+      });
+    }
+
+    if (index % 4 === 0) {
+      pushActivity({
+        kind: "task_repositioned",
+        createdAt: new Date(startedAtMs + 30 * 1000).toISOString(),
         taskLabel: task.label,
-        taskHistoryEntryID: entryId,
+        moveDestinationParentLabel:
+          index % 2 === 0 ? candidates[0]?.label : undefined,
+        moveBeforeTaskLabel: candidates[(index + 2) % candidates.length]?.label,
+        moveAfterTaskLabel: candidates[(index + 3) % candidates.length]?.label,
+      });
+    }
+
+    if (index % 5 === 0) {
+      pushActivity({
+        kind: "task_finished",
+        createdAt: new Date(endedAtMs + 10 * 1000).toISOString(),
+        taskLabel: task.label,
         durationSeconds,
-        startedAt,
-        endedAt,
-      },
-    );
+        taskHistoryEntryID: entryId,
+      });
+    }
 
     cursorMs = startedAtMs;
   }
+
+  const systemMoments = [
+    nowMs - 20 * 60 * 1000,
+    nowMs - 18 * 60 * 1000,
+    nowMs - 17 * 60 * 1000,
+    nowMs - 15 * 60 * 1000,
+    nowMs - 13 * 60 * 1000,
+    nowMs - 10 * 60 * 1000,
+    nowMs - 8 * 60 * 1000,
+    nowMs - 6 * 60 * 1000,
+  ];
+
+  pushActivity({
+    kind: "calendar_connected",
+    createdAt: new Date(systemMoments[0]).toISOString(),
+    taskLabel: "Google Calendar",
+    subjectLabel: "student@example.com",
+  });
+  pushActivity({
+    kind: "calendar_enabled",
+    createdAt: new Date(systemMoments[1]).toISOString(),
+    taskLabel: "Google Calendar",
+    subjectLabel: "DonStop",
+  });
+  pushActivity({
+    kind: "settings_cursor_disabled",
+    createdAt: new Date(systemMoments[2]).toISOString(),
+    taskLabel: "Settings",
+  });
+  pushActivity({
+    kind: "settings_cursor_enabled",
+    createdAt: new Date(systemMoments[3]).toISOString(),
+    taskLabel: "Settings",
+  });
+  pushActivity({
+    kind: "settings_primary_color_changed",
+    createdAt: new Date(systemMoments[4]).toISOString(),
+    taskLabel: "Settings",
+    oldValue: "blue",
+    newValue: "amber",
+  });
+  pushActivity({
+    kind: "calendar_disabled",
+    createdAt: new Date(systemMoments[5]).toISOString(),
+    taskLabel: "Google Calendar",
+    subjectLabel: "DonStop",
+  });
+  pushActivity({
+    kind: "calendar_target_changed",
+    createdAt: new Date(systemMoments[6] - 45 * 1000).toISOString(),
+    taskLabel: "Google Calendar",
+    oldValue: "DonStop",
+    newValue: "School",
+  });
+  pushActivity({
+    kind: "calendar_enabled",
+    createdAt: new Date(systemMoments[6]).toISOString(),
+    taskLabel: "Google Calendar",
+    subjectLabel: "DonStop",
+  });
+  pushActivity({
+    kind: "calendar_disconnected",
+    createdAt: new Date(systemMoments[7]).toISOString(),
+    taskLabel: "Google Calendar",
+  });
 
   history.sort(
     (left, right) =>

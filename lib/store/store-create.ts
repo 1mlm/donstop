@@ -4,6 +4,10 @@ import { createFakeHistoryData, createFakeTasks } from "../fake";
 import { malikDebug } from "../malik-debug";
 import type { TaskObj } from "../types";
 import {
+  computeCancelActiveTaskState,
+  computeFinishActiveTaskState,
+} from "./store-lifecycle.utils";
+import {
   completeActiveSession,
   createCalendarActivity,
   createDefaultState,
@@ -19,6 +23,11 @@ import {
   createTaskRepositionActivity,
   type TaskMovePlacement,
 } from "./store-move";
+import {
+  computeTransferActiveSession,
+  resetActiveSessionStart,
+  resetTaskDurationInList,
+} from "./store-session.utils";
 
 export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   createTask: (label: string, parentId?: TaskID) => TaskID | null;
@@ -29,6 +38,7 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   finishTask: (taskID: TaskID) => void;
   restoreTask: (taskID: TaskID) => void;
   resetTaskDuration: (taskID: TaskID) => void;
+  setTaskDuration: (taskID: TaskID, durationSeconds: number) => boolean;
   populateFakeData: () => boolean;
   cancelActiveTask: (skipConfirmation?: boolean) => boolean;
   transferActiveTaskTime: (targetTaskID: TaskID) => void;
@@ -52,6 +62,20 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   ) => void;
   markHistoryEntryFailed: (historyEntryID: string) => void;
   markHistoryEntriesDeleted: (historyEntryIDs: string[]) => void;
+  logCalendarConnected: (subjectLabel?: string) => void;
+  logCalendarDisconnected: (subjectLabel?: string) => void;
+  logCalendarSyncEnabled: (subjectLabel?: string) => void;
+  logCalendarSyncDisabled: (subjectLabel?: string) => void;
+  logCalendarTargetChanged: (
+    previousCalendarName: string,
+    nextCalendarName: string,
+  ) => void;
+  logSettingsCursorEnabled: () => void;
+  logSettingsCursorDisabled: () => void;
+  logSettingsPrimaryColorChanged: (
+    previousColor: string,
+    nextColor: string,
+  ) => void;
   getRootTaskIDs: () => TaskID[];
   getTaskFromID: (taskID: TaskID) => TaskObj | null;
   getTaskChildrenIDs: (taskID: TaskID) => TaskID[];
@@ -229,43 +253,25 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
         finishActiveTask() {
           const { activeSession, tasks: currentTasks, activity } = get();
 
-          if (!activeSession) {
+          const finished = computeFinishActiveTaskState(
+            currentTasks,
+            activeSession,
+          );
+
+          if (!finished) {
             malikDebug("\u2B1C", "store task finish no active session");
             return;
           }
 
-          const task = currentTasks.find((t) => t.id === activeSession.taskId);
-          if (!task) return;
-
-          const completedDuration = Math.floor(
-            (Date.now() - new Date(activeSession.startedAt).getTime()) / 1000,
-          );
-
-          const finishedAt = new Date().toISOString();
-
           set({
-            tasks: currentTasks.map((t) =>
-              t.id === activeSession.taskId
-                ? { ...t, isFinished: true, finishedAt, isFavorite: false }
-                : t,
-            ),
+            tasks: finished.nextTasks,
             activeSession: null,
-            activity: [
-              {
-                id: `task-finished-${Date.now()}`,
-                kind: "task_finished" as const,
-                createdAt: finishedAt,
-                taskLabel: task.label,
-                taskHistoryEntryID: activeSession.taskId,
-                durationSeconds: completedDuration,
-              } as const,
-              ...activity,
-            ],
+            activity: [finished.activityItem, ...activity],
           });
 
           malikDebug("\u2B1C", "store task finished", {
-            task: task.label,
-            durationSeconds: completedDuration,
+            task: finished.taskLabel,
+            durationSeconds: finished.durationSeconds,
           });
         },
         resetActiveTaskDuration() {
@@ -276,13 +282,8 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             return;
           }
 
-          const resetAt = new Date().toISOString();
-
           set({
-            activeSession: {
-              taskId: activeSession.taskId,
-              startedAt: resetAt,
-            },
+            activeSession: resetActiveSessionStart(activeSession),
           });
 
           malikDebug("\u2B1C", "store task duration reset", {
@@ -341,10 +342,32 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
         resetTaskDuration(taskID) {
           const { tasks: currentTasks } = get();
           set({
-            tasks: currentTasks.map((t) =>
-              t.id === taskID ? { ...t, time: 0 } : t,
-            ),
+            tasks: resetTaskDurationInList(currentTasks, taskID),
           });
+        },
+        setTaskDuration(taskID, durationSeconds) {
+          if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
+            return false;
+          }
+
+          const rounded = Math.floor(durationSeconds);
+          const task = get().getTaskFromID(taskID);
+
+          if (!task) {
+            return false;
+          }
+
+          if (task.time === rounded) {
+            return false;
+          }
+
+          set((state) => ({
+            tasks: state.tasks.map((item) =>
+              item.id === taskID ? { ...item, time: rounded } : item,
+            ),
+          }));
+
+          return true;
         },
         populateFakeData() {
           const {
@@ -392,43 +415,33 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             return false;
           }
 
-          const task = currentTasks.find((t) => t.id === activeSession.taskId);
-          if (!task) return false;
-
-          const durationSeconds = Math.floor(
-            (Date.now() - new Date(activeSession.startedAt).getTime()) / 1000,
+          const cancelled = computeCancelActiveTaskState(
+            currentTasks,
+            activeSession,
           );
 
-          if (!skipConfirmation && durationSeconds > 300) {
+          if (!cancelled) {
+            return false;
+          }
+
+          if (!skipConfirmation && cancelled.durationSeconds > 300) {
             // 5 minutes = 300 seconds
             if (typeof window !== "undefined") {
               const confirmed = window.confirm(
-                `Cancel "${task.label}" after ${Math.floor(durationSeconds / 60)}+ minutes? This will discard the time spent.`,
+                `Cancel "${cancelled.taskLabel}" after ${Math.floor(cancelled.durationSeconds / 60)}+ minutes? This will discard the time spent.`,
               );
               if (!confirmed) return false;
             }
           }
 
-          const cancelledAt = new Date().toISOString();
-
           set({
             activeSession: null,
-            activity: [
-              {
-                id: `task-cancelled-${Date.now()}`,
-                kind: "task_cancelled" as const,
-                createdAt: cancelledAt,
-                taskLabel: task.label,
-                taskHistoryEntryID: activeSession.taskId,
-                durationSeconds,
-              } as const,
-              ...activity,
-            ],
+            activity: [cancelled.activityItem, ...activity],
           });
 
           malikDebug("\u2B1C", "store task cancelled", {
-            task: task.label,
-            durationSeconds,
+            task: cancelled.taskLabel,
+            durationSeconds: cancelled.durationSeconds,
           });
 
           return true;
@@ -436,53 +449,39 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
         transferActiveTaskTime(targetTaskID) {
           const { activeSession, tasks: currentTasks, activity } = get();
 
-          if (!activeSession) {
-            malikDebug("\u2B1C", "store task transfer no active session");
-            return;
-          }
-
-          const sourceTask = currentTasks.find(
-            (t) => t.id === activeSession.taskId,
+          const transfer = computeTransferActiveSession(
+            activeSession,
+            currentTasks,
+            targetTaskID,
           );
-          const targetTask = currentTasks.find((t) => t.id === targetTaskID);
 
-          if (!sourceTask || !targetTask) {
+          if (!transfer) {
             malikDebug("\u2B1C", "store task transfer tasks not found");
             return;
           }
-
-          const transferMomentMs = Date.now();
-          const transferredDuration = Math.floor(
-            (transferMomentMs - new Date(activeSession.startedAt).getTime()) /
-              1000,
-          );
-          const transferredAt = new Date(transferMomentMs).toISOString();
+          const transferredAt = new Date().toISOString();
 
           set({
             tasks: currentTasks,
-            activeSession: {
-              taskId: targetTaskID,
-              // Keep original start time so transferred elapsed time remains in the live segment.
-              startedAt: activeSession.startedAt,
-            },
+            activeSession: transfer.nextActiveSession,
             activity: [
               {
                 id: `task-transferred-${Date.now()}`,
                 kind: "task_transferred" as const,
                 createdAt: transferredAt,
-                taskLabel: targetTask.label,
+                taskLabel: transfer.targetTaskLabel,
                 taskHistoryEntryID: targetTaskID,
-                sourceTaskLabel: sourceTask.label,
-                durationSeconds: transferredDuration,
+                sourceTaskLabel: transfer.sourceTaskLabel,
+                durationSeconds: transfer.durationSeconds,
               },
               ...activity,
             ],
           });
 
           malikDebug("\u2B1C", "store task time transferred", {
-            from: sourceTask.label,
-            to: targetTask.label,
-            durationSeconds: transferredDuration,
+            from: transfer.sourceTaskLabel,
+            to: transfer.targetTaskLabel,
+            durationSeconds: transfer.durationSeconds,
           });
         },
         resetAllData() {
@@ -600,6 +599,134 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           malikDebug("\u2B1C", "store calendar events deleted", {
             count: historyEntryIDs.length,
           });
+        },
+        logCalendarConnected(subjectLabel) {
+          set((state) => ({
+            activity: [
+              {
+                id: `calendar-connected-${Date.now()}`,
+                kind: "calendar_connected" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Google Calendar",
+                taskHistoryEntryID: crypto.randomUUID(),
+                subjectLabel,
+              },
+              ...state.activity,
+            ],
+          }));
+        },
+        logCalendarDisconnected(subjectLabel) {
+          set((state) => ({
+            activity: [
+              {
+                id: `calendar-disconnected-${Date.now()}`,
+                kind: "calendar_disconnected" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Google Calendar",
+                taskHistoryEntryID: crypto.randomUUID(),
+                subjectLabel,
+              },
+              ...state.activity,
+            ],
+          }));
+        },
+        logCalendarSyncEnabled(subjectLabel) {
+          set((state) => ({
+            activity: [
+              {
+                id: `calendar-enabled-${Date.now()}`,
+                kind: "calendar_enabled" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Google Calendar",
+                taskHistoryEntryID: crypto.randomUUID(),
+                subjectLabel,
+              },
+              ...state.activity,
+            ],
+          }));
+        },
+        logCalendarSyncDisabled(subjectLabel) {
+          set((state) => ({
+            activity: [
+              {
+                id: `calendar-disabled-${Date.now()}`,
+                kind: "calendar_disabled" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Google Calendar",
+                taskHistoryEntryID: crypto.randomUUID(),
+                subjectLabel,
+              },
+              ...state.activity,
+            ],
+          }));
+        },
+        logCalendarTargetChanged(previousCalendarName, nextCalendarName) {
+          if (previousCalendarName === nextCalendarName) {
+            return;
+          }
+
+          set((state) => ({
+            activity: [
+              {
+                id: `calendar-target-changed-${Date.now()}`,
+                kind: "calendar_target_changed" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Google Calendar",
+                taskHistoryEntryID: crypto.randomUUID(),
+                oldValue: previousCalendarName,
+                newValue: nextCalendarName,
+              },
+              ...state.activity,
+            ],
+          }));
+        },
+        logSettingsCursorEnabled() {
+          set((state) => ({
+            activity: [
+              {
+                id: `settings-cursor-enabled-${Date.now()}`,
+                kind: "settings_cursor_enabled" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Settings",
+                taskHistoryEntryID: crypto.randomUUID(),
+              },
+              ...state.activity,
+            ],
+          }));
+        },
+        logSettingsCursorDisabled() {
+          set((state) => ({
+            activity: [
+              {
+                id: `settings-cursor-disabled-${Date.now()}`,
+                kind: "settings_cursor_disabled" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Settings",
+                taskHistoryEntryID: crypto.randomUUID(),
+              },
+              ...state.activity,
+            ],
+          }));
+        },
+        logSettingsPrimaryColorChanged(previousColor, nextColor) {
+          if (previousColor === nextColor) {
+            return;
+          }
+
+          set((state) => ({
+            activity: [
+              {
+                id: `settings-color-changed-${Date.now()}`,
+                kind: "settings_primary_color_changed" as const,
+                createdAt: new Date().toISOString(),
+                taskLabel: "Settings",
+                taskHistoryEntryID: crypto.randomUUID(),
+                oldValue: previousColor,
+                newValue: nextColor,
+              },
+              ...state.activity,
+            ],
+          }));
         },
         getRootTaskIDs() {
           return get()

@@ -1,5 +1,10 @@
 import type { TaskObj } from "../types";
-import { sortByPosition, type TaskID } from "./store-model";
+
+type TaskID = TaskObj["id"];
+
+function sortByPosition(left: TaskObj, right: TaskObj) {
+  return left.position - right.position;
+}
 
 export type TaskMovePlacement = "before" | "after" | "inside";
 
@@ -123,8 +128,9 @@ export function applyTaskMovePlan(tasks: TaskObj[], movePlan: TaskMovePlan) {
       };
     }
 
-    const previousSiblingPosition =
-      movePlan.previousSiblingPositionByID?.get(item.id);
+    const previousSiblingPosition = movePlan.previousSiblingPositionByID?.get(
+      item.id,
+    );
     if (previousSiblingPosition !== undefined) {
       return {
         ...item,

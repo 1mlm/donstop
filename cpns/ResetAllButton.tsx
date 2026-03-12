@@ -3,6 +3,7 @@
 import {
   BlackHoleIcon,
   CloudOffIcon,
+  HourglassIcon,
   NewsIcon,
   Task01Icon,
 } from "@hugeicons/core-free-icons";
@@ -285,6 +286,8 @@ export default function ResetAllButton() {
           <AlertDialogAction
             variant="destructive"
             disabled={!canConfirm}
+            loading={!isWaitDone}
+            loadingIcon={HourglassIcon}
             onClick={() => {
               googleLogout();
               clearStoredGoogleCalendarAuth();

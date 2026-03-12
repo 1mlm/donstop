@@ -80,6 +80,14 @@ const historyActivityItemSchema = z.object({
     "task_copied",
     "calendar_synced",
     "calendar_sync_failed",
+    "calendar_connected",
+    "calendar_disconnected",
+    "calendar_enabled",
+    "calendar_disabled",
+    "calendar_target_changed",
+    "settings_cursor_enabled",
+    "settings_cursor_disabled",
+    "settings_primary_color_changed",
   ]),
   createdAt: z.string(),
   taskLabel: z.string(),
@@ -94,6 +102,9 @@ const historyActivityItemSchema = z.object({
   moveDestinationParentLabel: z.string().optional(),
   moveBeforeTaskLabel: z.string().optional(),
   moveAfterTaskLabel: z.string().optional(),
+  subjectLabel: z.string().optional(),
+  oldValue: z.string().optional(),
+  newValue: z.string().optional(),
 });
 
 const persistedTodoStateSchema = z.object({

@@ -2,13 +2,22 @@
 
 import {
   Add01Icon,
+  AdjustPositionIcon,
   ArrowDataTransferDiagonalIcon,
+  ArrowRight01Icon,
+  CalendarRemove01Icon,
+  CalendarSetting01Icon,
+  CloudIcon,
   Copy01Icon,
+  CursorMagicSelection04Icon,
   Delete02Icon,
   Edit02Icon,
+  Logout02Icon,
+  PaintBrush04Icon,
   PartyIcon,
   Play,
   StopIcon,
+  UnavailableIcon,
   Undo03Icon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
@@ -79,10 +88,7 @@ function TaskRepositionedActivity({ item }: { item: HistoryActivityItem }) {
 
   return (
     <>
-      <Icon
-        icon={ArrowDataTransferDiagonalIcon}
-        className="mx-1 inline size-3.5"
-      />
+      <Icon icon={AdjustPositionIcon} className="mx-1 inline size-3.5" />
       <span>Repositioned </span>
       <ActivityBadge>{item.taskLabel}</ActivityBadge>
 
@@ -280,6 +286,97 @@ export function HistoryActivityLine({
             </ActivityBadge>
             <span> from </span>
             <ActivityBadge>{item.taskLabel}</ActivityBadge>
+          </>
+        ) : item.kind === "calendar_connected" ? (
+          <>
+            <Icon icon={CloudIcon} className="mx-1 inline size-3.5" />
+            <span>Connected Google Calendar</span>
+            {item.subjectLabel ? (
+              <>
+                <span> as </span>
+                <ActivityBadge>{item.subjectLabel}</ActivityBadge>
+              </>
+            ) : null}
+          </>
+        ) : item.kind === "calendar_disconnected" ? (
+          <>
+            <Icon icon={Logout02Icon} className="mx-1 inline size-3.5" />
+            <span>Disconnected Google Calendar</span>
+          </>
+        ) : item.kind === "calendar_enabled" ? (
+          <>
+            <Icon
+              icon={CalendarSetting01Icon}
+              className="mx-1 inline size-3.5"
+            />
+            <span>Enabled calendar sync</span>
+            {item.subjectLabel ? (
+              <>
+                <span> for </span>
+                <ActivityBadge>{item.subjectLabel}</ActivityBadge>
+              </>
+            ) : null}
+          </>
+        ) : item.kind === "calendar_disabled" ? (
+          <>
+            <Icon
+              icon={CalendarRemove01Icon}
+              className="mx-1 inline size-3.5"
+            />
+            <span>Disabled calendar sync</span>
+            {item.subjectLabel ? (
+              <>
+                <span> for </span>
+                <ActivityBadge>{item.subjectLabel}</ActivityBadge>
+              </>
+            ) : null}
+          </>
+        ) : item.kind === "calendar_target_changed" ? (
+          <>
+            <Icon icon={ArrowRight01Icon} className="mx-1 inline size-3.5" />
+            <span>Changed target calendar</span>
+            {item.oldValue ? (
+              <>
+                <span> from </span>
+                <ActivityBadge>{item.oldValue}</ActivityBadge>
+              </>
+            ) : null}
+            {item.newValue ? (
+              <>
+                <span> to </span>
+                <ActivityBadge>{item.newValue}</ActivityBadge>
+              </>
+            ) : null}
+          </>
+        ) : item.kind === "settings_cursor_enabled" ? (
+          <>
+            <Icon
+              icon={CursorMagicSelection04Icon}
+              className="mx-1 inline size-3.5"
+            />
+            <span>Enabled custom cursor</span>
+          </>
+        ) : item.kind === "settings_cursor_disabled" ? (
+          <>
+            <Icon icon={UnavailableIcon} className="mx-1 inline size-3.5" />
+            <span>Disabled custom cursor</span>
+          </>
+        ) : item.kind === "settings_primary_color_changed" ? (
+          <>
+            <Icon icon={PaintBrush04Icon} className="mx-1 inline size-3.5" />
+            <span>Changed primary color</span>
+            {item.oldValue ? (
+              <>
+                <span> from </span>
+                <ActivityBadge>{item.oldValue}</ActivityBadge>
+              </>
+            ) : null}
+            {item.newValue ? (
+              <>
+                <span> to </span>
+                <ActivityBadge>{item.newValue}</ActivityBadge>
+              </>
+            ) : null}
           </>
         ) : null}
       </div>

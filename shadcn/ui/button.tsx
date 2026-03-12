@@ -1,8 +1,10 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
+import { Loading03Icon } from "@hugeicons/core-free-icons"
 
 import { cn } from "@/shadcn/lib/utils"
+import { Icon, type HugeIcon } from "@/cpns/Icon"
 
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -46,21 +48,33 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  loading = false,
+  loadingIcon = Loading03Icon,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    loading?: boolean
+    loadingIcon?: HugeIcon
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  const shouldShowLoadingIcon = loading && !asChild
 
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
+      aria-busy={loading || undefined}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {shouldShowLoadingIcon ? (
+        <Icon icon={loadingIcon} className="animate-spin" />
+      ) : null}
+      {children}
+    </Comp>
   )
 }
 

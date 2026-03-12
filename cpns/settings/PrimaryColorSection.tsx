@@ -11,9 +11,11 @@ import {
 export function PrimaryColorSection({
   primaryColor,
   setPrimaryColor,
+  onPrimaryColorChanged,
 }: {
   primaryColor: string;
   setPrimaryColor: (color: string) => void;
+  onPrimaryColorChanged?: (color: string) => void;
 }) {
   const selectedPrimaryColor =
     TAILWIND_500_COLORS.find((color) => color.value === primaryColor) ?? null;
@@ -46,6 +48,7 @@ export function PrimaryColorSection({
             color={color}
             isSelected={color.value === primaryColor}
             onSelect={setPrimaryColor}
+            onPrimaryColorChanged={onPrimaryColorChanged}
           />
         ))}
       </div>
@@ -57,10 +60,12 @@ function PrimaryColorSwatch({
   color,
   isSelected,
   onSelect,
+  onPrimaryColorChanged,
 }: {
   color: PaletteColor;
   isSelected: boolean;
   onSelect: (color: string) => void;
+  onPrimaryColorChanged?: (color: string) => void;
 }) {
   return (
     <button
@@ -71,6 +76,7 @@ function PrimaryColorSwatch({
         onSelect(color.value);
         applyPrimaryColor(color.value);
         writeStoredPrimaryColor(color.value);
+        onPrimaryColorChanged?.(color.value);
       }}
       className={`relative size-5 rounded-md transition-all hover:scale-105 ${
         isSelected

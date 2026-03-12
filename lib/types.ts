@@ -38,12 +38,20 @@ export type HistoryActivityKind =
   | "task_repositioned"
   | "calendar_synced"
   | "calendar_sync_failed"
+  | "calendar_connected"
+  | "calendar_disconnected"
+  | "calendar_enabled"
+  | "calendar_disabled"
+  | "calendar_target_changed"
   | "task_finished"
   | "task_restored"
   | "task_cancelled"
   | "task_renamed"
   | "task_deleted"
-  | "task_copied";
+  | "task_copied"
+  | "settings_cursor_enabled"
+  | "settings_cursor_disabled"
+  | "settings_primary_color_changed";
 
 export type HistoryActivityItem = {
   id: string;
@@ -61,4 +69,7 @@ export type HistoryActivityItem = {
   moveDestinationParentLabel?: string;
   moveBeforeTaskLabel?: string;
   moveAfterTaskLabel?: string;
+  subjectLabel?: string;
+  oldValue?: string;
+  newValue?: string;
 };

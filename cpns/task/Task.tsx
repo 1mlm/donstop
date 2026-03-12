@@ -18,6 +18,9 @@ import { useTaskRunningSeconds } from "@/lib/live-task";
 import { MOTION_PROPS } from "@/lib/motion";
 import { type TaskID, useTODOStore } from "@/lib/store";
 import { formatPreviewTime } from "@/lib/util";
+import { Button } from "@/shadcn/ui/button";
+import { Input } from "@/shadcn/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -28,6 +31,11 @@ import { Icon } from "../Icon";
 import { useTaskDndContext } from "./TaskDndContext";
 import TaskList from "./TaskList";
 import {
+  DropGapIndicator,
+  TaskActionsMenu,
+  TaskDragPlaceholder,
+} from "./task.components";
+import {
   useActionsMenuViewportSyncEffect,
   useTaskAutoExpandOnChildrenEffect,
   useTaskCollapseWhileDraggingEffect,
@@ -35,18 +43,66 @@ import {
   useTaskEditValueSyncEffect,
   useTaskTimeoutCleanupEffect,
 } from "./task.effects";
-import {
-  DropGapIndicator,
-  TaskActionsMenu,
-  TaskDragPlaceholder,
-} from "./task.components";
 import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
 
 const taskExpandedState = new Map<TaskID, boolean>();
-const OPEN_ACTIONS_DELAY_MS = 35;
+const OPEN_ACTIONS_DELAY_MS = 500;
 const CLOSE_ACTIONS_DELAY_MS = 150;
-const OPEN_COPY_DELAY_MS = 45;
-const CLOSE_COPY_DELAY_MS = 120;
+const OPEN_ELEMENT_DELAY_MS = 45;
+const CLOSE_ELEMENT_DELAY_MS = 120;
+
+function formatDurationInputValue(totalSeconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function parseDurationInputValue(raw: string) {
+  const value = raw.trim();
+
+  if (value.length === 0) {
+    return null;
+  }
+
+  if (/^\d+$/.test(value)) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
+  }
+
+  const parts = value.split(":").map((part) => part.trim());
+  if (parts.length < 2 || parts.length > 3) {
+    return null;
+  }
+
+  if (parts.some((part) => !/^\d+$/.test(part))) {
+    return null;
+  }
+
+  const [left, middle, right] = parts.map(Number);
+
+  if (parts.length === 2) {
+    const minutes = left;
+    const seconds = middle;
+
+    if (seconds >= 60) {
+      return null;
+    }
+
+    return minutes * 60 + seconds;
+  }
+
+  const hours = left;
+  const minutes = middle;
+  const seconds = right;
+  if (minutes >= 60 || seconds >= 60) {
+    return null;
+  }
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
 
 function clearTimer(timerRef: React.MutableRefObject<number | null>) {
   if (timerRef.current === null) {
@@ -75,19 +131,25 @@ export function Task({ taskID }: { taskID: TaskID }) {
   );
   const [isTaskHovered, setIsTaskHovered] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
-  const [copyMenuOpen, setCopyMenuOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState("");
+  const [elementMenuOpen, setElementMenuOpen] = useState<
+    "name" | "time" | null
+  >(null);
+  const [editMode, setEditMode] = useState<"name" | null>(null);
+  const [editNameValue, setEditNameValue] = useState("");
+  const [isTimePopoverOpen, setIsTimePopoverOpen] = useState(false);
+  const [editTimeValue, setEditTimeValue] = useState("00:00:00");
+  const [timeEditError, setTimeEditError] = useState<string | null>(null);
   const [actionsMenuPos, setActionsMenuPos] = useState<{
     left: number;
     top: number;
   } | null>(null);
+  const taskHeaderRowRef = useRef<HTMLDivElement | null>(null);
   const editInputRef = useRef<HTMLSpanElement | null>(null);
   const actionsTriggerRef = useRef<HTMLDivElement | null>(null);
   const openActionsTimeoutRef = useRef<number | null>(null);
   const closeActionsTimeoutRef = useRef<number | null>(null);
-  const openCopyTimeoutRef = useRef<number | null>(null);
-  const closeCopyTimeoutRef = useRef<number | null>(null);
+  const openElementTimeoutRef = useRef<number | null>(null);
+  const closeElementTimeoutRef = useRef<number | null>(null);
 
   const startTask = useTODOStore((state) => state.startTask);
   const stopActiveTask = useTODOStore((state) => state.stopActiveTask);
@@ -103,6 +165,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const finishTask = useTODOStore((state) => state.finishTask);
   const restoreTask = useTODOStore((state) => state.restoreTask);
   const resetTaskDuration = useTODOStore((state) => state.resetTaskDuration);
+  const setTaskDuration = useTODOStore((state) => state.setTaskDuration);
   const renameTask = useTODOStore((state) => state.renameTask);
   const deleteTask = useTODOStore((state) => state.deleteTask);
   const logTaskCopied = useTODOStore((state) => state.logTaskCopied);
@@ -122,11 +185,14 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const isFinished = task?.isFinished ?? false;
   const isFavorite = task?.isFavorite ?? false;
   const taskLabel = task?.label ?? "";
+  const taskStoredSeconds = task?.time ?? 0;
   const hasActiveChild = hasActiveChildRecursive(taskID);
   const { draggingTaskID, draggingDescendantIDs } = useTaskDndContext();
   const shouldShowRowControls =
-    (!draggingTaskID && isTaskHovered) || actionsMenuOpen || copyMenuOpen;
-  const isAnyMenuOpen = actionsMenuOpen || copyMenuOpen;
+    (!draggingTaskID && isTaskHovered) ||
+    actionsMenuOpen ||
+    elementMenuOpen !== null;
+  const isAnyMenuOpen = actionsMenuOpen || elementMenuOpen !== null;
   const prevChildrenCountRef = useRef(childrenIDs.length);
 
   useEffect(() => {
@@ -156,7 +222,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
     isDragging,
   } = useDraggable({
     id: taskID,
-    disabled: isEditing,
+    disabled: editMode !== null || isTimePopoverOpen,
   });
 
   const isSourceOfActiveDrag = draggingTaskID === taskID;
@@ -196,10 +262,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
     setExpanded,
   });
 
-  useTaskEditValueSyncEffect({ taskLabel, setEditValue });
+  useTaskEditValueSyncEffect({ taskLabel, setEditValue: setEditNameValue });
 
   useTaskEditableFocusEffect({
-    isEditing,
+    isEditing: editMode === "name",
     taskLabel,
     editInputRef,
   });
@@ -207,13 +273,40 @@ export function Task({ taskID }: { taskID: TaskID }) {
   useTaskTimeoutCleanupEffect([
     openActionsTimeoutRef,
     closeActionsTimeoutRef,
-    openCopyTimeoutRef,
-    closeCopyTimeoutRef,
+    openElementTimeoutRef,
+    closeElementTimeoutRef,
   ]);
+
+  useEffect(() => {
+    if (!isTaskHovered || isAnyMenuOpen) {
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const rowNode = taskHeaderRowRef.current;
+      const eventTarget = event.target;
+
+      if (!(eventTarget instanceof Node) || !rowNode) {
+        return;
+      }
+
+      if (!rowNode.contains(eventTarget)) {
+        setIsTaskHovered(false);
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+    };
+  }, [isTaskHovered, isAnyMenuOpen]);
 
   const closeMenus = () => {
     setActionsMenuOpen(false);
-    setCopyMenuOpen(false);
+    setElementMenuOpen(null);
     setIsTaskHovered(false);
   };
 
@@ -226,6 +319,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
   }, []);
 
   const scheduleOpenActionsMenu = () => {
+    if (actionsMenuOpen) {
+      return;
+    }
+
     clearTimer(closeActionsTimeoutRef);
     scheduleTimer(openActionsTimeoutRef, OPEN_ACTIONS_DELAY_MS, () => {
       updateActionsMenuPosition();
@@ -233,27 +330,41 @@ export function Task({ taskID }: { taskID: TaskID }) {
     });
   };
 
+  const toggleActionsMenu = () => {
+    clearTimer(openActionsTimeoutRef);
+    clearTimer(closeActionsTimeoutRef);
+    updateActionsMenuPosition();
+    setActionsMenuOpen((previous) => {
+      const next = !previous;
+
+      if (!next) {
+        setElementMenuOpen(null);
+      }
+
+      return next;
+    });
+  };
+
   const scheduleCloseActionsMenu = () => {
     clearTimer(openActionsTimeoutRef);
     scheduleTimer(closeActionsTimeoutRef, CLOSE_ACTIONS_DELAY_MS, () => {
       setActionsMenuOpen(false);
-      setCopyMenuOpen(false);
-      setIsTaskHovered(false);
+      setElementMenuOpen(null);
     });
   };
 
-  const scheduleOpenCopyMenu = () => {
-    clearTimer(closeCopyTimeoutRef);
-    scheduleTimer(openCopyTimeoutRef, OPEN_COPY_DELAY_MS, () => {
+  const scheduleOpenElementMenu = (key: "name" | "time") => {
+    clearTimer(closeElementTimeoutRef);
+    scheduleTimer(openElementTimeoutRef, OPEN_ELEMENT_DELAY_MS, () => {
       updateActionsMenuPosition();
-      setCopyMenuOpen(true);
+      setElementMenuOpen(key);
     });
   };
 
-  const scheduleCloseCopyMenu = () => {
-    clearTimer(openCopyTimeoutRef);
-    scheduleTimer(closeCopyTimeoutRef, CLOSE_COPY_DELAY_MS, () => {
-      setCopyMenuOpen(false);
+  const scheduleCloseElementMenu = () => {
+    clearTimer(openElementTimeoutRef);
+    scheduleTimer(closeElementTimeoutRef, CLOSE_ELEMENT_DELAY_MS, () => {
+      setElementMenuOpen(null);
     });
   };
 
@@ -272,19 +383,34 @@ export function Task({ taskID }: { taskID: TaskID }) {
     }
   };
 
-  const copyTaskValue = async (value: string, target: "id" | "name") => {
+  const copyTaskValue = async (value: string, target: "id" | "name" | null) => {
     try {
       await navigator.clipboard.writeText(value);
-      logTaskCopied(taskID, target);
-      setCopyMenuOpen(false);
+      if (target) {
+        logTaskCopied(taskID, target);
+      }
+      setElementMenuOpen(null);
     } catch {
       // Ignore clipboard errors silently.
     }
   };
 
   const commitRename = () => {
-    renameTask(taskID, editValue);
-    setIsEditing(false);
+    renameTask(taskID, editNameValue);
+    setEditMode(null);
+  };
+
+  const commitTimeEdit = () => {
+    const parsed = parseDurationInputValue(editTimeValue);
+
+    if (parsed === null) {
+      setTimeEditError("Use ss, mm:ss, or hh:mm:ss");
+      return;
+    }
+
+    setTaskDuration(taskID, parsed);
+    setTimeEditError(null);
+    setIsTimePopoverOpen(false);
   };
 
   useActionsMenuViewportSyncEffect({
@@ -417,12 +543,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
           style={draggableStyle}
           {...attributes}
           {...listeners}
-          onPointerEnter={() => setIsTaskHovered(true)}
-          onPointerLeave={() => {
-            if (!isAnyMenuOpen) {
-              setIsTaskHovered(false);
-            }
-          }}
           className={`flex flex-col
         relative
         isolate
@@ -433,7 +553,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
         border
         rounded-2xl squircle squircle-2xl
           ${isFinished ? finishedTaskPaddingClass : activeTaskPaddingClass}
-        ${expanded && "rounded-tl-md pb-1"}
+        ${isParent && expanded && "rounded-tl-md pb-1"}
         ${
           isActive
             ? "bg-primary/50 text-primary-foreground shadow-lg font-semibold"
@@ -461,8 +581,17 @@ export function Task({ taskID }: { taskID: TaskID }) {
           ) : (
             <>
               <div
-                ref={setDropInsideNodeRef}
-                className={`flex items-center justify-between text-ellipsis transition-colors duration-250 ease-out ${expanded && "pb-1"}`}
+                ref={(node) => {
+                  taskHeaderRowRef.current = node;
+                  setDropInsideNodeRef(node);
+                }}
+                onPointerEnter={() => setIsTaskHovered(true)}
+                onPointerLeave={() => {
+                  if (!isAnyMenuOpen) {
+                    setIsTaskHovered(false);
+                  }
+                }}
+                className={`flex items-center justify-between text-ellipsis transition-colors duration-250 ease-out ${isParent && expanded && "pb-1"}`}
               >
                 <div
                   className={`flex shrink-0 overflow-visible transition-[width,margin-right] duration-180 ease-out ${
@@ -482,17 +611,17 @@ export function Task({ taskID }: { taskID: TaskID }) {
                       onMouseEnter={scheduleOpenActionsMenu}
                       onMouseLeave={scheduleCloseActionsMenu}
                     >
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            className="rounded squircle squircle-lg bg-transparent p-1 transition-colors hover:bg-primary/15"
-                            aria-label="Task actions"
-                          >
-                            <Icon icon={MoreIcon} className="size-4" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Task actions</TooltipContent>
-                      </Tooltip>
+                      <button
+                        className="rounded squircle squircle-lg bg-transparent p-1 transition-colors hover:bg-primary/15"
+                        aria-label="Task group options"
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleActionsMenu();
+                        }}
+                      >
+                        <Icon icon={MoreIcon} className="size-4" />
+                      </button>
 
                       <TaskActionsMenu
                         open={actionsMenuOpen}
@@ -501,15 +630,24 @@ export function Task({ taskID }: { taskID: TaskID }) {
                         isActive={isActive}
                         activeTaskID={activeTaskID}
                         isFavorite={isFavorite}
-                        copyMenuOpen={copyMenuOpen}
+                        elementMenuOpen={elementMenuOpen}
                         onMouseEnterMenu={scheduleOpenActionsMenu}
                         onMouseLeaveMenu={scheduleCloseActionsMenu}
-                        onMouseEnterCopy={scheduleOpenCopyMenu}
-                        onMouseLeaveCopy={scheduleCloseCopyMenu}
-                        onToggleCopy={() => setCopyMenuOpen((prev) => !prev)}
-                        onStartEdit={() => {
-                          setEditValue(taskLabel);
-                          setIsEditing(true);
+                        onMouseEnterName={() => scheduleOpenElementMenu("name")}
+                        onMouseLeaveName={scheduleCloseElementMenu}
+                        onMouseEnterTime={() => scheduleOpenElementMenu("time")}
+                        onMouseLeaveTime={scheduleCloseElementMenu}
+                        onStartEditName={() => {
+                          setEditNameValue(taskLabel);
+                          setEditMode("name");
+                          closeMenus();
+                        }}
+                        onStartEditTime={() => {
+                          setEditTimeValue(
+                            formatDurationInputValue(taskStoredSeconds),
+                          );
+                          setTimeEditError(null);
+                          setIsTimePopoverOpen(true);
                           closeMenus();
                         }}
                         onTransfer={handleTransfer}
@@ -522,7 +660,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           closeMenus();
                         }}
                         onCancelActive={() => {
-                          cancelActiveTask(false);
+                          cancelActiveTask(true);
                           closeMenus();
                         }}
                         onFinishTask={() => {
@@ -535,8 +673,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
                         }}
                         onToggleFavorite={() => toggleFavorite(taskID)}
                         onDelete={tryDeleteTask}
-                        onCopyID={() => copyTaskValue(task.id, "id")}
                         onCopyName={() => copyTaskValue(taskLabel, "name")}
+                        onCopyTime={() =>
+                          copyTaskValue(String(taskStoredSeconds), null)
+                        }
                       />
                     </div>
 
@@ -574,7 +714,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   onClick={toggleExpanded}
                 >
                   {isFinished && <span className="mr-1">• • • •</span>}
-                  {isEditing ? (
+                  {editMode === "name" ? (
                     <span
                       ref={editInputRef}
                       contentEditable
@@ -582,7 +722,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                       onClick={(event) => event.stopPropagation()}
                       onPointerDown={(event) => event.stopPropagation()}
                       onInput={(event) => {
-                        setEditValue(event.currentTarget.textContent ?? "");
+                        setEditNameValue(event.currentTarget.textContent ?? "");
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter") {
@@ -592,8 +732,8 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
                         if (event.key === "Escape") {
                           event.preventDefault();
-                          setEditValue(taskLabel);
-                          setIsEditing(false);
+                          setEditNameValue(taskLabel);
+                          setEditMode(null);
                         }
                       }}
                       onBlur={() => {
@@ -604,9 +744,89 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   ) : (
                     taskLabel
                   )}
-                  <span className="pl-1 text-xs text-primary-foreground/50">
-                    {taskDurationLabel}
-                  </span>
+                  <Popover
+                    open={isTimePopoverOpen}
+                    onOpenChange={(nextOpen) => {
+                      if (nextOpen) {
+                        setEditTimeValue(
+                          formatDurationInputValue(taskStoredSeconds),
+                        );
+                        setTimeEditError(null);
+                      }
+
+                      setIsTimePopoverOpen(nextOpen);
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="pl-1 text-xs text-primary-foreground/50 rounded-md transition-colors hover:text-primary-foreground/80"
+                        onClick={(event) => event.stopPropagation()}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        aria-label="Edit task duration"
+                      >
+                        {taskDurationLabel}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      className="w-64"
+                      onOpenAutoFocus={(event) => event.preventDefault()}
+                      onClick={(event) => event.stopPropagation()}
+                      onPointerDown={(event) => event.stopPropagation()}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Input
+                          id={`task-duration-${taskID}`}
+                          autoFocus
+                          value={editTimeValue}
+                          onChange={(event) => {
+                            setEditTimeValue(event.target.value);
+                            if (timeEditError) {
+                              setTimeEditError(null);
+                            }
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitTimeEdit();
+                            }
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              setIsTimePopoverOpen(false);
+                              setTimeEditError(null);
+                            }
+                          }}
+                          placeholder="hh:mm:ss"
+                          aria-label="Task duration"
+                          style={{
+                            width: `${Math.max(6, editTimeValue.length)}ch`,
+                            minWidth: 60,
+                            maxWidth: 120,
+                          }}
+                          className="text-sm px-2 py-1 rounded border border-input bg-transparent focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={commitTimeEdit}
+                          className="ml-1"
+                        >
+                          Save
+                        </Button>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Accepts ss, mm:ss, or hh:mm:ss
+                        </p>
+                        {timeEditError ? (
+                          <p className="text-xs text-destructive mt-1">
+                            {timeEditError}
+                          </p>
+                        ) : null}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </span>
 
                 {isParent && (

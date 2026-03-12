@@ -5,6 +5,10 @@ import { malikDebug } from "../malik-debug";
 import { useTODOStore } from "../store";
 import type { TaskHistoryEntry } from "../types";
 import {
+  calendarSyncInFlightEntryIDs,
+  syncPendingEntries,
+} from "./calendar-sync.utils";
+import {
   createGoogleCalendarEvent,
   type GoogleCalendarListEntry,
 } from "./google-calendar";
@@ -40,35 +44,26 @@ export function useCalendarSync(
     const sync = async () => {
       setIsSyncing(true);
       setSyncError(null);
-      let hasError = false;
-
-      for (const entry of pending) {
-        try {
-          const event = await createGoogleCalendarEvent(
-            auth.accessToken,
-            targetCalendarID,
-            entry,
-          );
-          markSynced(
-            entry.id,
-            event.id,
-            targetCalendarID,
-            selectedCalendar?.summary || "Unknown calendar",
-          );
-          malikDebug("✅", "synced to calendar", { task: entry.taskLabel });
-        } catch (error) {
-          hasError = true;
-          markFailed(entry.id);
-          setSyncError(
-            error instanceof Error ? error.message : "Calendar sync failed",
-          );
-          malikDebug("🟥", "calendar sync error", error);
-        }
-      }
+      const { hasError } = await syncPendingEntries({
+        pending,
+        accessToken: auth.accessToken,
+        targetCalendarID,
+        selectedCalendarName: selectedCalendar?.summary || "Unknown calendar",
+        inFlightEntryIDs: calendarSyncInFlightEntryIDs,
+        createEvent: createGoogleCalendarEvent,
+        markSynced,
+        markFailed,
+        setSyncError,
+      });
 
       if (!hasError) {
-        setSyncError(null);
+        for (const entry of pending) {
+          malikDebug("✅", "synced to calendar", { task: entry.taskLabel });
+        }
+      } else {
+        malikDebug("🟥", "calendar sync completed with failures");
       }
+
       setIsSyncing(false);
     };
 

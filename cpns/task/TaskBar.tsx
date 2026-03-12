@@ -58,6 +58,8 @@ export default function TaskBar() {
     null,
   );
   const isPointerWithinDropAreaRef = useRef(true);
+  const pointerWithinDropAreaRafRef = useRef<number | null>(null);
+  const nextPointerWithinDropAreaValueRef = useRef(true);
   const rootTaskIDs = useTODOStore(
     useShallow((state) => state.getRootTaskIDs()),
   );
@@ -104,58 +106,91 @@ export default function TaskBar() {
     };
   }, [draggingTaskID]);
 
-  const boundedCollisionDetection = useCallback<CollisionDetection>((args) => {
-    const bounds = taskDropAreaRef.current?.getBoundingClientRect();
-    const pointer = args.pointerCoordinates;
+  useEffect(() => {
+    return () => {
+      if (pointerWithinDropAreaRafRef.current !== null) {
+        window.cancelAnimationFrame(pointerWithinDropAreaRafRef.current);
+        pointerWithinDropAreaRafRef.current = null;
+      }
+    };
+  }, []);
 
-    if (!bounds || !pointer) {
-      return closestCenter(args);
-    }
+  const schedulePointerWithinDropAreaUpdate = useCallback(
+    (nextValue: boolean) => {
+      nextPointerWithinDropAreaValueRef.current = nextValue;
 
-    lastPointerCoordinatesRef.current = { x: pointer.x, y: pointer.y };
+      if (pointerWithinDropAreaRafRef.current !== null) {
+        return;
+      }
 
-    const isPointerInsideStrictBounds = isPointerInsideBounds(pointer, bounds);
+      pointerWithinDropAreaRafRef.current = window.requestAnimationFrame(() => {
+        pointerWithinDropAreaRafRef.current = null;
+        setIsPointerWithinDropArea(nextPointerWithinDropAreaValueRef.current);
+      });
+    },
+    [],
+  );
 
-    const canSnapToEndOutsideBottom = isBottomEndSnapDrop({
-      bounds,
-      pointer,
-    });
+  const boundedCollisionDetection = useCallback<CollisionDetection>(
+    (args) => {
+      const bounds = taskDropAreaRef.current?.getBoundingClientRect();
+      const pointer = args.pointerCoordinates;
 
-    const isPointerWithinDropArea =
-      isPointerInsideStrictBounds || canSnapToEndOutsideBottom;
+      if (!bounds || !pointer) {
+        return closestCenter(args);
+      }
 
-    if (isPointerWithinDropAreaRef.current !== isPointerWithinDropArea) {
-      isPointerWithinDropAreaRef.current = isPointerWithinDropArea;
-      setIsPointerWithinDropArea(isPointerWithinDropArea);
-    }
+      lastPointerCoordinatesRef.current = { x: pointer.x, y: pointer.y };
 
-    if (!isPointerInsideStrictBounds) {
-      return [];
-    }
+      const isPointerInsideStrictBounds = isPointerInsideBounds(
+        pointer,
+        bounds,
+      );
 
-    const pointerCollisions = pointerWithin(args);
-    if (pointerCollisions.length > 0) {
-      return pointerCollisions;
-    }
-
-    const edgeDropContainers = args.droppableContainers.filter((container) => {
-      return isEdgeDropContainerID(String(container.id));
-    });
-
-    if (edgeDropContainers.length > 0) {
-      const edgeCollisions = closestCenter({
-        ...args,
-        droppableContainers: edgeDropContainers,
+      const canSnapToEndOutsideBottom = isBottomEndSnapDrop({
+        bounds,
+        pointer,
       });
 
-      if (edgeCollisions.length > 0) {
-        return edgeCollisions;
-      }
-    }
+      const isPointerWithinDropArea =
+        isPointerInsideStrictBounds || canSnapToEndOutsideBottom;
 
-    // Fallback keeps drop feeling forgiving when pointer is near slim drop rails.
-    return closestCenter(args);
-  }, []);
+      if (isPointerWithinDropAreaRef.current !== isPointerWithinDropArea) {
+        isPointerWithinDropAreaRef.current = isPointerWithinDropArea;
+        schedulePointerWithinDropAreaUpdate(isPointerWithinDropArea);
+      }
+
+      if (!isPointerInsideStrictBounds) {
+        return [];
+      }
+
+      const pointerCollisions = pointerWithin(args);
+      if (pointerCollisions.length > 0) {
+        return pointerCollisions;
+      }
+
+      const edgeDropContainers = args.droppableContainers.filter(
+        (container) => {
+          return isEdgeDropContainerID(String(container.id));
+        },
+      );
+
+      if (edgeDropContainers.length > 0) {
+        const edgeCollisions = closestCenter({
+          ...args,
+          droppableContainers: edgeDropContainers,
+        });
+
+        if (edgeCollisions.length > 0) {
+          return edgeCollisions;
+        }
+      }
+
+      // Fallback keeps drop feeling forgiving when pointer is near slim drop rails.
+      return closestCenter(args);
+    },
+    [schedulePointerWithinDropAreaUpdate],
+  );
 
   const submitNewTask = useCallback(() => {
     const label = newTaskLabel.trim();
@@ -172,14 +207,26 @@ export default function TaskBar() {
   }, [createTask, newTaskLabel]);
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (pointerWithinDropAreaRafRef.current !== null) {
+      window.cancelAnimationFrame(pointerWithinDropAreaRafRef.current);
+      pointerWithinDropAreaRafRef.current = null;
+    }
+
     lastPointerCoordinatesRef.current = null;
     isPointerWithinDropAreaRef.current = true;
+    nextPointerWithinDropAreaValueRef.current = true;
     setIsPointerWithinDropArea(true);
     setDraggingTaskID(String(event.active.id));
   };
 
   const finalizeDrag = () => {
+    if (pointerWithinDropAreaRafRef.current !== null) {
+      window.cancelAnimationFrame(pointerWithinDropAreaRafRef.current);
+      pointerWithinDropAreaRafRef.current = null;
+    }
+
     isPointerWithinDropAreaRef.current = true;
+    nextPointerWithinDropAreaValueRef.current = true;
     setIsPointerWithinDropArea(true);
     setDraggingTaskID(null);
   };
