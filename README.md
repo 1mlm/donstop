@@ -14,7 +14,7 @@ Compact nested task and time-tracking app focused on low-friction flow: write ta
 
 ## 🎥 Demo
 
-<video controls src="public/demo.mp4" title="Demo"></video>
+https://github.com/user-attachments/assets/457b6fdf-ead1-41c3-9669-9ed8faa23ce8
 
 ## ✨ Features
 
