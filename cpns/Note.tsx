@@ -7,11 +7,13 @@ export function Note({
   text,
   className,
   url,
+  trailingIcon,
 }: {
   url?: string;
   variant?: "muted" | "destructive" | "pill";
   text: string;
   icon: HugeIcon;
+  trailingIcon?: HugeIcon;
   className?: string;
 }) {
   return (
@@ -24,13 +26,14 @@ export function Note({
         {
           destructive: "text-destructive",
           muted: "text-muted-foreground",
-          pill: `p-0.5 px-2 rounded-full bg-card border-accent border`,
+          pill: `p-0.5 px-2 rounded-full squircle squircle-full bg-card border-accent border`,
         }[variant],
         className,
       )}
     >
       <Icon {...{ icon }} />
       <span>{text}</span>
+      {trailingIcon && <Icon icon={trailingIcon} />}
     </a>
   );
 }

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@squircle/tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -61,7 +62,7 @@
   --popover-foreground: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
 
   /* Brand and semantic */
-  --primary: light-dark(oklch(0.541 0.281 293.009), oklch(0.541 0.281 293.009));
+  --primary: light-dark(oklch(0.541 0.281 293.009), #eef5ff);
   --primary-foreground: light-dark(#0d2745, #eef5ff);
 
   --secondary: light-dark(
@@ -116,10 +117,44 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  body.custom-cursor-enabled {
+    cursor:
+      url("/normal.svg?v=3") 4 4,
+      default;
+  }
+
+  body.custom-cursor-enabled button,
+  body.custom-cursor-enabled [role="button"],
+  body.custom-cursor-enabled a,
+  body.custom-cursor-enabled summary,
+  body.custom-cursor-enabled input[type="button"],
+  body.custom-cursor-enabled input[type="submit"],
+  body.custom-cursor-enabled input[type="reset"],
+  body.custom-cursor-enabled .cursor-pointer,
+  body.custom-cursor-enabled .hover-hand {
+    cursor:
+      url("/pointer.svg?v=3") 6 6,
+      pointer;
+  }
 }
 
 @layer components {
-  .hover-hand {
-    @apply cursor-pointer;
+  body.custom-cursor-enabled .cursor-default-custom {
+    cursor:
+      url("/normal.svg?v=3") 4 4,
+      default;
+  }
+
+  body.custom-cursor-enabled .cursor-pointer-custom {
+    cursor:
+      url("/pointer.svg?v=3") 6 6,
+      pointer;
+  }
+
+  body.custom-cursor-enabled .cursor-info-custom {
+    cursor:
+      url("/info.svg?v=3") 6 6,
+      help;
   }
 }

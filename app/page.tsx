@@ -1,48 +1,32 @@
 "use client";
-import {
-  CalendarRemove01Icon,
-  Github,
-  Task01Icon,
-} from "@hugeicons/core-free-icons";
+import { Note05Icon } from "@hugeicons/core-free-icons";
+import { GoogleCalendarProvider } from "@/cpns/calendar/GoogleCalendarProvider";
+import { Icon } from "@/cpns/Icon";
 import MainBar from "@/cpns/MainBar";
-import { Separator } from "@/cpns/Separator";
-import TaskBar from "@/cpns/TaskBar";
+import { AppTopBar } from "@/cpns/page";
+import { TaskBar } from "@/cpns/task";
 import { TODOStoreProvider } from "@/lib/store";
-import { Note } from "../cpns/Note";
 
-export default function TestPage() {
+export default function HomePage() {
   return (
-    <TODOStoreProvider>
-      <div
-        className={`w-screen h-screen flex
-      *:p-3 *:h-full *:flex *:flex-col *:gap-3 *:items-center`}
-      >
-        {/* Task Bar */}
-        <div className="w-1/3">
-          <Note icon={Task01Icon} text="Tasks" className="pl-2" />
-          <TaskBar />
-        </div>
-        {/* Main Content */}
-        <div className="w-full">
-          <MainBar />
-          <div className="flex items-center justify-center gap-2">
-            <Note
-              url="https://github.com/1mlm/donstop"
-              text="1mlm/donstop"
-              icon={Github}
-              variant="pill"
-            />
-            <Separator />
-            {/* <Note text="Settings" icon={Settings01Icon} variant="pill" />
-            <Separator /> */}
-            <Note
-              variant={"destructive"}
-              icon={CalendarRemove01Icon}
-              text="Connect Google Calendar"
-            />
+    <GoogleCalendarProvider>
+      <TODOStoreProvider>
+        <div className="relative flex h-screen w-screen overflow-hidden pt-16">
+          <div className="flex h-full w-1/3 flex-col items-center p-3 pt-1">
+            <div className="mb-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Icon icon={Note05Icon} className="size-4" />
+              <span className="font-medium">Tasks</span>
+            </div>
+            <TaskBar />
           </div>
+          <div className="flex h-full flex-1 flex-col items-center gap-3 p-3">
+            <MainBar />
+          </div>
+
+          <div className="pointer-events-none absolute inset-x-8 top-[3.3rem] border-t-2 border-border/70" />
+          <AppTopBar />
         </div>
-      </div>
-    </TODOStoreProvider>
+      </TODOStoreProvider>
+    </GoogleCalendarProvider>
   );
 }

@@ -1,39 +1,259 @@
-import type { TaskObj } from "./types";
+import type { HistoryActivityItem, TaskHistoryEntry, TaskObj } from "./types";
 
-export const FAKE_TASKS: TaskObj[] = [
+const baseFakeTasks: TaskObj[] = [
   {
-    id: "1",
+    id: "school",
     label: "School",
     position: 1,
-    time: 924,
+    time: 22140,
+    isFavorite: true,
   },
-  { id: "1-1", label: "Physics", parentId: "1", position: 1, time: 2959 },
   {
-    id: "1-1-1",
-    label: "Quantum Mechanics",
-    parentId: "1-1",
+    id: "school-chem",
+    label: "Chemistry",
+    parentId: "school",
     position: 1,
-    time: 13,
+    time: 6420,
   },
   {
-    id: "1-1-2",
-    label: "Thermodynamics",
-    parentId: "1-1",
-    position: 2,
-    time: 29482,
+    id: "school-chem-lab",
+    label: "Lab report: titration",
+    parentId: "school-chem",
+    position: 1,
+    time: 1840,
+    isFinished: true,
+    finishedAt: "2026-03-09T18:15:00.000Z",
   },
-  { id: "1-2", label: "CS", parentId: "1", position: 2 },
-  { id: "1-2-1", label: "Data Structures", parentId: "1-2", position: 1 },
-  { id: "1-2-1-1", label: "Binary Trees", parentId: "1-2-1", position: 1 },
-  { id: "1-2-1-2", label: "Graphs", parentId: "1-2-1", position: 2 },
-  { id: "1-2-2", label: "Algorithms", parentId: "1-2", position: 2 },
   {
-    id: "2",
-    label: "Chores",
+    id: "school-chem-quiz",
+    label: "Organic quiz flashcards",
+    parentId: "school-chem",
     position: 2,
-    time: 9242,
+    time: 920,
   },
-  { id: "2-1", label: "Laundry", parentId: "2", position: 1 },
-  { id: "2-2", label: "Clean Room", parentId: "2", position: 2 },
-  { id: "3", label: "Other Projects", position: 3 },
-].map((c) => ({ ...c, time: c.time || 0 }));
+  {
+    id: "school-math",
+    label: "Math",
+    parentId: "school",
+    position: 2,
+    time: 7710,
+    isFavorite: true,
+  },
+  {
+    id: "school-math-calc",
+    label: "Calculus set 4",
+    parentId: "school-math",
+    position: 1,
+    time: 2010,
+  },
+  {
+    id: "school-math-calc-q1",
+    label: "Q1 limits review",
+    parentId: "school-math-calc",
+    position: 1,
+    time: 620,
+    isFinished: true,
+    finishedAt: "2026-03-10T19:05:00.000Z",
+  },
+  {
+    id: "school-math-calc-q2",
+    label: "Q2 optimization",
+    parentId: "school-math-calc",
+    position: 2,
+    time: 540,
+  },
+  {
+    id: "school-math-alg",
+    label: "Linear algebra recap",
+    parentId: "school-math",
+    position: 2,
+    time: 980,
+  },
+  {
+    id: "school-history",
+    label: "History",
+    parentId: "school",
+    position: 3,
+    time: 3230,
+  },
+  {
+    id: "school-history-essay",
+    label: "Essay draft: post-war Europe",
+    parentId: "school-history",
+    position: 1,
+    time: 1540,
+    isFinished: true,
+    finishedAt: "2026-03-08T16:22:00.000Z",
+  },
+  {
+    id: "school-history-sources",
+    label: "Primary source notes",
+    parentId: "school-history",
+    position: 2,
+    time: 870,
+  },
+
+  {
+    id: "projects",
+    label: "Projects",
+    position: 2,
+    time: 16820,
+  },
+  {
+    id: "projects-github",
+    label: "GitHub",
+    parentId: "projects",
+    position: 1,
+    time: 8340,
+  },
+  {
+    id: "projects-github-todo",
+    label: "todo-app UI polish",
+    parentId: "projects-github",
+    position: 1,
+    time: 3810,
+    isFavorite: true,
+  },
+  {
+    id: "projects-github-prisma",
+    label: "prisma-orm migration notes",
+    parentId: "projects-github",
+    position: 2,
+    time: 1520,
+  },
+  {
+    id: "projects-github-ts",
+    label: "typescript utility cleanup",
+    parentId: "projects-github",
+    position: 3,
+    time: 1290,
+  },
+  {
+    id: "projects-drawing",
+    label: "Drawing",
+    parentId: "projects",
+    position: 2,
+    time: 2260,
+    isFinished: true,
+    finishedAt: "2026-03-07T20:10:00.000Z",
+  },
+  {
+    id: "projects-drawing-refs",
+    label: "Reference board",
+    parentId: "projects-drawing",
+    position: 1,
+    time: 940,
+  },
+
+  {
+    id: "fitness",
+    label: "Workout",
+    position: 3,
+    time: 3600,
+  },
+
+  {
+    id: "admin",
+    label: "Admin",
+    position: 4,
+    time: 1420,
+    isFinished: true,
+    finishedAt: "2026-03-10T10:10:00.000Z",
+  },
+];
+
+export function createFakeTasks(): TaskObj[] {
+  return baseFakeTasks.map((task) => ({ ...task, time: task.time || 0 }));
+}
+
+export const FAKE_TASKS: TaskObj[] = createFakeTasks();
+
+function pickCalendarStatus(
+  index: number,
+): TaskHistoryEntry["calendarSyncStatus"] {
+  if (index % 5 === 0) return "failed";
+  if (index % 3 === 0) return "synced";
+  return "pending";
+}
+
+export function createFakeHistoryData(
+  tasks: TaskObj[],
+  nowMs = Date.now(),
+): {
+  history: TaskHistoryEntry[];
+  activity: HistoryActivityItem[];
+} {
+  const candidates = tasks
+    .filter((task) => task.label.trim().length > 0)
+    .slice()
+    .sort((a, b) => (b.time || 0) - (a.time || 0));
+
+  if (candidates.length === 0) {
+    return { history: [], activity: [] };
+  }
+
+  const sessionCount = Math.min(
+    10,
+    Math.max(5, Math.floor(candidates.length / 2)),
+  );
+  const history: TaskHistoryEntry[] = [];
+  const activity: HistoryActivityItem[] = [];
+
+  let cursorMs = nowMs;
+
+  for (let index = 0; index < sessionCount; index += 1) {
+    const task = candidates[index % candidates.length];
+    const gapSeconds = 4 * 60 + Math.floor(Math.random() * 18 * 60);
+    const durationSeconds = 8 * 60 + Math.floor(Math.random() * 92 * 60);
+
+    const endedAtMs = cursorMs - gapSeconds * 1000;
+    const startedAtMs = endedAtMs - durationSeconds * 1000;
+    const startedAt = new Date(startedAtMs).toISOString();
+    const endedAt = new Date(endedAtMs).toISOString();
+    const entryId = crypto.randomUUID();
+
+    const historyEntry: TaskHistoryEntry = {
+      id: entryId,
+      taskId: task.id,
+      taskLabel: task.label,
+      startedAt,
+      endedAt,
+      durationSeconds,
+      calendarSyncStatus: pickCalendarStatus(index),
+    };
+
+    history.push(historyEntry);
+    activity.push(
+      {
+        id: crypto.randomUUID(),
+        kind: "task_started",
+        createdAt: startedAt,
+        taskLabel: task.label,
+        taskHistoryEntryID: entryId,
+      },
+      {
+        id: crypto.randomUUID(),
+        kind: "task_session",
+        createdAt: endedAt,
+        taskLabel: task.label,
+        taskHistoryEntryID: entryId,
+        durationSeconds,
+        startedAt,
+        endedAt,
+      },
+    );
+
+    cursorMs = startedAtMs;
+  }
+
+  history.sort(
+    (left, right) =>
+      new Date(right.endedAt).getTime() - new Date(left.endedAt).getTime(),
+  );
+  activity.sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+  );
+
+  return { history, activity };
+}

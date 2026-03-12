@@ -1,16 +1,21 @@
 import { motion } from "motion/react";
-import type { PropsWithChildren } from "react";
+import { forwardRef, type PropsWithChildren } from "react";
 import { cn } from "@/shadcn/lib/utils";
 
-export function Bar({
-  className,
-  children,
-}: PropsWithChildren & { className?: string }) {
+export const Bar = forwardRef<
+  HTMLDivElement,
+  PropsWithChildren & { className?: string }
+>(function Bar({ className, children }, ref) {
   return (
     <motion.div
-      className={cn("flex flex-col size-full rounded-3xl", className)}
+      ref={ref}
+      className={cn(
+        "flex flex-col size-full rounded-3xl squircle squircle-3xl",
+        className,
+      )}
     >
       {children}
     </motion.div>
   );
 }
+);
