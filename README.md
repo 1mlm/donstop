@@ -100,9 +100,6 @@ NEXT_PUBLIC_APP_URL=https://donstop.vercel.app
 
 # Optional: debug logs (default: false)
 NEXT_PUBLIC_MALIK_DEBUG=false
-
-# Optional: minimum tracked task session duration in seconds (default: 300)
-NEXT_PUBLIC_MIN_TASK_SECONDS=300
 ```
 
 ## 📅 Google Calendar Setup (Optional)

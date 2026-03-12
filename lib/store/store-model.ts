@@ -9,20 +9,6 @@ import { getElapsedSeconds } from "../util";
 
 export const TODO_STORE_STORAGE_KEY = "todo-app-store";
 
-function readMinTrackedTaskDurationSeconds() {
-  const rawValue = process.env.NEXT_PUBLIC_MIN_TASK_SECONDS;
-  const parsedValue = Number(rawValue);
-
-  if (Number.isFinite(parsedValue) && parsedValue >= 0) {
-    return parsedValue;
-  }
-
-  return 5 * 60;
-}
-
-export const MIN_TRACKED_TASK_DURATION_SECONDS =
-  readMinTrackedTaskDurationSeconds();
-
 export type TaskID = TaskObj["id"];
 
 export type PersistedTODOState = {
@@ -162,13 +148,6 @@ export function completeActiveSession(
   }
 
   const durationSeconds = getElapsedSeconds(activeSession.startedAt, endTimeMs);
-
-  if (durationSeconds < MIN_TRACKED_TASK_DURATION_SECONDS) {
-    return {
-      completedSession: null,
-      nextTasks: tasks,
-    };
-  }
 
   const endedAt = new Date(endTimeMs).toISOString();
 
