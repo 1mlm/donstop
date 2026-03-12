@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { useStore } from "zustand";
-import { FAKE_TASKS } from "../fake";
 import type { TaskObj } from "../types";
 import { createTODOStoreBase, type TODOStoreState } from "./store-create";
 
@@ -19,7 +18,7 @@ export const TODOStoreContext = createContext<TODOStoreAPI | undefined>(
 );
 
 export const TODOStoreProvider = ({ children }: PropsWithChildren) => {
-  const [store] = useState(() => createTODOStoreBase(FAKE_TASKS));
+  const [store] = useState(() => createTODOStoreBase([]));
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

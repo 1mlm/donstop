@@ -67,6 +67,9 @@ Optional values:
 # Optional: enables Google Calendar integration UI and OAuth flow
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 
+# Recommended for production metadata links and calendar event descriptions
+NEXT_PUBLIC_APP_URL=https://donstop.vercel.app
+
 # Optional: debug logs (default: false)
 NEXT_PUBLIC_MALIK_DEBUG=false
 
@@ -84,6 +87,11 @@ NEXT_PUBLIC_MIN_TASK_SECONDS=300
 6. Add `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to `.env.local`.
 7. Restart the dev server.
 8. In-app, open Google Calendar integration and choose the destination calendar.
+
+Production additions:
+
+9. Add authorized JavaScript origin: `https://donstop.vercel.app` (or your final domain).
+10. Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `NEXT_PUBLIC_APP_URL` in Vercel project env vars.
 
 ### Permissions
 

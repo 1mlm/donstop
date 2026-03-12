@@ -89,7 +89,19 @@ type GoogleCalendarCreateResponse = {
   foregroundColor?: string;
 };
 
-const WEBSITE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3005";
+function resolveWebsiteURL() {
+  const configuredURL = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (configuredURL) {
+    return configuredURL;
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return "http://localhost:3005";
+}
 
 async function parseGoogleError(response: Response) {
   const fallbackMessage = `Google request failed with ${response.status}`;
@@ -157,6 +169,7 @@ export async function createGoogleCalendarEvent(
 
   const encodedCalendarID = encodeURIComponent(calendarId);
   const postedAt = new Date().toISOString();
+  const websiteURL = resolveWebsiteURL();
 
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarID}/events`,
@@ -170,7 +183,7 @@ export async function createGoogleCalendarEvent(
         summary: `${session.taskLabel} (DonStop)`,
         description: [
           `Event ID: ${session.id}`,
-          `Website: ${WEBSITE_URL}`,
+          `Website: ${websiteURL}`,
           `Posted at: ${postedAt}`,
           `Tracked duration: ${session.durationSeconds} seconds`,
         ].join("\n"),
