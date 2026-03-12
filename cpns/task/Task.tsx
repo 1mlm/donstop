@@ -3,27 +3,16 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ArrowDataTransferDiagonalIcon,
-  ArrowRight01Icon,
   ChevronDown,
-  Copy01Icon,
   Delete02Icon,
-  Edit02Icon,
   Favorite,
-  FavouriteIcon,
-  HeartbreakIcon,
-  IdIcon,
   MoreIcon,
-  PartyIcon,
   Play,
   StopIcon,
-  TextIcon,
-  Undo03Icon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useShallow } from "zustand/shallow";
 import { useTaskRunningSeconds } from "@/lib/live-task";
 import { MOTION_PROPS } from "@/lib/motion";
@@ -35,7 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shadcn/ui/tooltip";
-import { type HugeIcon, Icon } from "../Icon";
+import { Icon } from "../Icon";
 import { useTaskDndContext } from "./TaskDndContext";
 import TaskList from "./TaskList";
 import {
@@ -46,9 +35,39 @@ import {
   useTaskEditValueSyncEffect,
   useTaskTimeoutCleanupEffect,
 } from "./task.effects";
+import {
+  DropGapIndicator,
+  TaskActionsMenu,
+  TaskDragPlaceholder,
+} from "./task.components";
 import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
 
 const taskExpandedState = new Map<TaskID, boolean>();
+const OPEN_ACTIONS_DELAY_MS = 35;
+const CLOSE_ACTIONS_DELAY_MS = 150;
+const OPEN_COPY_DELAY_MS = 45;
+const CLOSE_COPY_DELAY_MS = 120;
+
+function clearTimer(timerRef: React.MutableRefObject<number | null>) {
+  if (timerRef.current === null) {
+    return;
+  }
+
+  window.clearTimeout(timerRef.current);
+  timerRef.current = null;
+}
+
+function scheduleTimer(
+  timerRef: React.MutableRefObject<number | null>,
+  delayMs: number,
+  callback: () => void,
+) {
+  clearTimer(timerRef);
+  timerRef.current = window.setTimeout(() => {
+    callback();
+    timerRef.current = null;
+  }, delayMs);
+}
 
 export function Task({ taskID }: { taskID: TaskID }) {
   const [expanded, setExpanded] = useState(
@@ -65,7 +84,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
   } | null>(null);
   const editInputRef = useRef<HTMLSpanElement | null>(null);
   const actionsTriggerRef = useRef<HTMLDivElement | null>(null);
-  const copyTriggerRef = useRef<HTMLButtonElement | null>(null);
   const openActionsTimeoutRef = useRef<number | null>(null);
   const closeActionsTimeoutRef = useRef<number | null>(null);
   const openCopyTimeoutRef = useRef<number | null>(null);
@@ -196,6 +214,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const closeMenus = () => {
     setActionsMenuOpen(false);
     setCopyMenuOpen(false);
+    setIsTaskHovered(false);
   };
 
   const updateActionsMenuPosition = useCallback(() => {
@@ -207,75 +226,44 @@ export function Task({ taskID }: { taskID: TaskID }) {
   }, []);
 
   const scheduleOpenActionsMenu = () => {
-    if (closeActionsTimeoutRef.current !== null) {
-      window.clearTimeout(closeActionsTimeoutRef.current);
-      closeActionsTimeoutRef.current = null;
-    }
-
-    if (openActionsTimeoutRef.current !== null) {
-      window.clearTimeout(openActionsTimeoutRef.current);
-    }
-
-    openActionsTimeoutRef.current = window.setTimeout(() => {
+    clearTimer(closeActionsTimeoutRef);
+    scheduleTimer(openActionsTimeoutRef, OPEN_ACTIONS_DELAY_MS, () => {
       updateActionsMenuPosition();
       setActionsMenuOpen(true);
-      openActionsTimeoutRef.current = null;
-    }, 35);
+    });
   };
 
   const scheduleCloseActionsMenu = () => {
-    if (openActionsTimeoutRef.current !== null) {
-      window.clearTimeout(openActionsTimeoutRef.current);
-      openActionsTimeoutRef.current = null;
-    }
-
-    if (closeActionsTimeoutRef.current !== null) {
-      window.clearTimeout(closeActionsTimeoutRef.current);
-    }
-
-    closeActionsTimeoutRef.current = window.setTimeout(() => {
+    clearTimer(openActionsTimeoutRef);
+    scheduleTimer(closeActionsTimeoutRef, CLOSE_ACTIONS_DELAY_MS, () => {
       setActionsMenuOpen(false);
       setCopyMenuOpen(false);
-      closeActionsTimeoutRef.current = null;
-    }, 150);
+      setIsTaskHovered(false);
+    });
   };
 
   const scheduleOpenCopyMenu = () => {
-    if (closeCopyTimeoutRef.current !== null) {
-      window.clearTimeout(closeCopyTimeoutRef.current);
-      closeCopyTimeoutRef.current = null;
-    }
-
-    if (openCopyTimeoutRef.current !== null) {
-      window.clearTimeout(openCopyTimeoutRef.current);
-    }
-
-    openCopyTimeoutRef.current = window.setTimeout(() => {
+    clearTimer(closeCopyTimeoutRef);
+    scheduleTimer(openCopyTimeoutRef, OPEN_COPY_DELAY_MS, () => {
       updateActionsMenuPosition();
       setCopyMenuOpen(true);
-      openCopyTimeoutRef.current = null;
-    }, 45);
+    });
   };
 
   const scheduleCloseCopyMenu = () => {
-    if (openCopyTimeoutRef.current !== null) {
-      window.clearTimeout(openCopyTimeoutRef.current);
-      openCopyTimeoutRef.current = null;
-    }
-
-    if (closeCopyTimeoutRef.current !== null) {
-      window.clearTimeout(closeCopyTimeoutRef.current);
-    }
-
-    closeCopyTimeoutRef.current = window.setTimeout(() => {
+    clearTimer(openCopyTimeoutRef);
+    scheduleTimer(closeCopyTimeoutRef, CLOSE_COPY_DELAY_MS, () => {
       setCopyMenuOpen(false);
-      closeCopyTimeoutRef.current = null;
-    }, 120);
+    });
   };
 
-  function expand() {
-    return isParent && setExpanded(!expanded);
-  }
+  const toggleExpanded = () => {
+    if (!isParent) {
+      return;
+    }
+
+    setExpanded((previous) => !previous);
+  };
 
   const handleTransfer = () => {
     if (activeTaskID && activeTaskID !== taskID) {
@@ -335,18 +323,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
           } ${showAfterGap ? "pb-2" : "pb-0"}`}
         >
           {!isRowBeingDragged ? (
-            <div
-              ref={setDropBeforeNodeRef}
-              className="pointer-events-none absolute inset-x-0 -top-3.5 z-20 h-7"
-            >
-              <div
-                className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
-                  showDropTargets && isOverBefore
-                    ? "h-2.5 opacity-100"
-                    : "h-px scale-x-75 opacity-0"
-                }`}
-              />
-            </div>
+            <DropGapIndicator
+              setNodeRef={setDropBeforeNodeRef}
+              isActive={showDropTargets && isOverBefore}
+              position="top"
+            />
           ) : null}
 
           <div
@@ -406,18 +387,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
             )}
           </div>
 
-          <div
-            ref={setDropAfterNodeRef}
-            className="pointer-events-none absolute inset-x-0 -bottom-3.5 z-20 h-7"
-          >
-            <div
-              className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
-                showDropTargets && isOverAfter
-                  ? "h-2.5 opacity-100"
-                  : "h-px scale-x-75 opacity-0"
-              }`}
-            />
-          </div>
+          <DropGapIndicator
+            setNodeRef={setDropAfterNodeRef}
+            isActive={showDropTargets && isOverAfter}
+            position="bottom"
+          />
         </div>
       </TooltipProvider>
     );
@@ -431,18 +405,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
         } ${showAfterGap ? "pb-2" : "pb-0"}`}
       >
         {!isRowBeingDragged ? (
-          <div
-            ref={setDropBeforeNodeRef}
-            className="pointer-events-none absolute inset-x-0 -top-3.5 z-20 h-7"
-          >
-            <div
-              className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
-                showDropTargets && isOverBefore
-                  ? "h-2.5 opacity-100"
-                  : "h-px scale-x-75 opacity-0"
-              }`}
-            />
-          </div>
+          <DropGapIndicator
+            setNodeRef={setDropBeforeNodeRef}
+            isActive={showDropTargets && isOverBefore}
+            position="top"
+          />
         ) : null}
 
         <div
@@ -450,6 +417,12 @@ export function Task({ taskID }: { taskID: TaskID }) {
           style={draggableStyle}
           {...attributes}
           {...listeners}
+          onPointerEnter={() => setIsTaskHovered(true)}
+          onPointerLeave={() => {
+            if (!isAnyMenuOpen) {
+              setIsTaskHovered(false);
+            }
+          }}
           className={`flex flex-col
         relative
         isolate
@@ -489,8 +462,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
             <>
               <div
                 ref={setDropInsideNodeRef}
-                onMouseEnter={() => setIsTaskHovered(true)}
-                onMouseLeave={() => setIsTaskHovered(false)}
                 className={`flex items-center justify-between text-ellipsis transition-colors duration-250 ease-out ${expanded && "pb-1"}`}
               >
                 <div
@@ -523,187 +494,50 @@ export function Task({ taskID }: { taskID: TaskID }) {
                         <TooltipContent side="top">Task actions</TooltipContent>
                       </Tooltip>
 
-                      {actionsMenuOpen && actionsMenuPos
-                        ? createPortal(
-                            <TooltipProvider>
-                              <div
-                                className="fixed z-[9999] w-36 rounded-2xl border bg-popover/92 p-1 text-popover-foreground shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 font-normal"
-                                style={{
-                                  left: `${actionsMenuPos.left}px`,
-                                  top: `${actionsMenuPos.top}px`,
-                                }}
-                                onMouseEnter={scheduleOpenActionsMenu}
-                                onMouseLeave={scheduleCloseActionsMenu}
-                              >
-                                <div className="flex flex-col gap-0.5">
-                                  {isActive ? (
-                                    <>
-                                      <MenuRow
-                                        icon={Edit02Icon}
-                                        label="Edit"
-                                        onClick={() => {
-                                          setEditValue(taskLabel);
-                                          setIsEditing(true);
-                                          closeMenus();
-                                        }}
-                                      />
-                                      <MenuRow
-                                        icon={PartyIcon}
-                                        label="Finish"
-                                        onClick={() => {
-                                          finishActiveTask();
-                                          closeMenus();
-                                        }}
-                                      />
-                                      <MenuRow
-                                        icon={UndoIcon}
-                                        label="Reset duration"
-                                        onClick={() => {
-                                          resetActiveTaskDuration();
-                                          closeMenus();
-                                        }}
-                                      />
-                                      <MenuRow
-                                        icon={Undo03Icon}
-                                        label="Cancel"
-                                        onClick={() => {
-                                          cancelActiveTask(false);
-                                          closeMenus();
-                                        }}
-                                      />
-                                    </>
-                                  ) : (
-                                    <>
-                                      <MenuRow
-                                        icon={Edit02Icon}
-                                        label="Edit"
-                                        onClick={() => {
-                                          setEditValue(taskLabel);
-                                          setIsEditing(true);
-                                          closeMenus();
-                                        }}
-                                      />
-                                      {activeTaskID &&
-                                      activeTaskID !== taskID ? (
-                                        <MenuRow
-                                          icon={ArrowDataTransferDiagonalIcon}
-                                          label="Transfer"
-                                          onClick={handleTransfer}
-                                        />
-                                      ) : null}
-                                      <MenuRow
-                                        icon={PartyIcon}
-                                        label="Finish"
-                                        onClick={() => {
-                                          finishTask(taskID);
-                                          closeMenus();
-                                        }}
-                                      />
-                                      <MenuRow
-                                        icon={UndoIcon}
-                                        label="Reset duration"
-                                        onClick={() => {
-                                          resetTaskDuration(taskID);
-                                          closeMenus();
-                                        }}
-                                      />
-                                    </>
-                                  )}
-
-                                  <div className="mx-1 my-0.5 border-t border-border/60" />
-
-                                  <div
-                                    className="relative"
-                                    onMouseEnter={scheduleOpenCopyMenu}
-                                    onMouseLeave={scheduleCloseCopyMenu}
-                                  >
-                                    <button
-                                      ref={copyTriggerRef}
-                                      className="inline-flex w-full items-center gap-1 rounded-xl px-1.5 py-1 text-sm font-normal transition-colors hover:bg-primary/15"
-                                      onClick={() =>
-                                        setCopyMenuOpen((prev) => !prev)
-                                      }
-                                    >
-                                      <Icon
-                                        icon={Copy01Icon}
-                                        className="size-4"
-                                      />
-                                      <span className="font-semibold">
-                                        Copy
-                                      </span>
-                                      <Icon
-                                        icon={ArrowRight01Icon}
-                                        className="ml-auto size-4"
-                                      />
-                                    </button>
-
-                                    <div
-                                      className={`absolute left-full top-0.5 z-[10000] ml-2 w-28 overflow-hidden rounded-2xl border bg-popover/92 p-1 text-popover-foreground shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 transition-all ${
-                                        copyMenuOpen
-                                          ? "opacity-100 pointer-events-auto"
-                                          : "opacity-0 pointer-events-none"
-                                      }`}
-                                    >
-                                      <div className="flex flex-col gap-1">
-                                        <MenuRow
-                                          icon={IdIcon}
-                                          label="ID"
-                                          onClick={() =>
-                                            copyTaskValue(task.id, "id")
-                                          }
-                                        />
-                                        <MenuRow
-                                          icon={TextIcon}
-                                          label="Name"
-                                          onClick={() =>
-                                            copyTaskValue(taskLabel, "name")
-                                          }
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <MenuRow
-                                    icon={
-                                      isFavorite
-                                        ? HeartbreakIcon
-                                        : FavouriteIcon
-                                    }
-                                    label={
-                                      isFavorite ? "Un-Favorite" : "Favorite"
-                                    }
-                                    onClick={() => toggleFavorite(taskID)}
-                                  />
-
-                                  <div className="mx-1 my-0.5 border-t border-border/60" />
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div>
-                                        <MenuRow
-                                          icon={Delete02Icon}
-                                          label="Delete"
-                                          onClick={tryDeleteTask}
-                                          className="text-destructive hover:bg-destructive/15 w-full"
-                                          disabled={isActive}
-                                        />
-                                      </div>
-                                    </TooltipTrigger>
-                                    {isActive && (
-                                      <TooltipContent
-                                        side="left"
-                                        className="max-w-48 text-xs"
-                                      >
-                                        Can't delete a currently active task
-                                      </TooltipContent>
-                                    )}
-                                  </Tooltip>
-                                </div>
-                              </div>
-                            </TooltipProvider>,
-                            document.body,
-                          )
-                        : null}
+                      <TaskActionsMenu
+                        open={actionsMenuOpen}
+                        position={actionsMenuPos}
+                        taskID={taskID}
+                        isActive={isActive}
+                        activeTaskID={activeTaskID}
+                        isFavorite={isFavorite}
+                        copyMenuOpen={copyMenuOpen}
+                        onMouseEnterMenu={scheduleOpenActionsMenu}
+                        onMouseLeaveMenu={scheduleCloseActionsMenu}
+                        onMouseEnterCopy={scheduleOpenCopyMenu}
+                        onMouseLeaveCopy={scheduleCloseCopyMenu}
+                        onToggleCopy={() => setCopyMenuOpen((prev) => !prev)}
+                        onStartEdit={() => {
+                          setEditValue(taskLabel);
+                          setIsEditing(true);
+                          closeMenus();
+                        }}
+                        onTransfer={handleTransfer}
+                        onFinishActive={() => {
+                          finishActiveTask();
+                          closeMenus();
+                        }}
+                        onResetActiveDuration={() => {
+                          resetActiveTaskDuration();
+                          closeMenus();
+                        }}
+                        onCancelActive={() => {
+                          cancelActiveTask(false);
+                          closeMenus();
+                        }}
+                        onFinishTask={() => {
+                          finishTask(taskID);
+                          closeMenus();
+                        }}
+                        onResetTaskDuration={() => {
+                          resetTaskDuration(taskID);
+                          closeMenus();
+                        }}
+                        onToggleFavorite={() => toggleFavorite(taskID)}
+                        onDelete={tryDeleteTask}
+                        onCopyID={() => copyTaskValue(task.id, "id")}
+                        onCopyName={() => copyTaskValue(taskLabel, "name")}
+                      />
                     </div>
 
                     <Tooltip>
@@ -737,7 +571,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
                 <span
                   className="w-full truncate pl-0.5 text-left"
-                  onClick={expand}
+                  onClick={toggleExpanded}
                 >
                   {isFinished && <span className="mr-1">• • • •</span>}
                   {isEditing ? (
@@ -770,13 +604,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   ) : (
                     taskLabel
                   )}
-                  <span
-                    className={`pl-1 text-xs ${
-                      isActive
-                        ? "text-primary-foreground/50"
-                        : "text-primary-foreground/50"
-                    }`}
-                  >
+                  <span className="pl-1 text-xs text-primary-foreground/50">
                     {taskDurationLabel}
                   </span>
                 </span>
@@ -785,7 +613,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={expand}
+                        onClick={toggleExpanded}
                         className="relative p-1 rounded squircle squircle-lg transition-colors shrink-0"
                         aria-label={
                           expanded ? "Collapse subtasks" : "Expand subtasks"
@@ -832,57 +660,13 @@ export function Task({ taskID }: { taskID: TaskID }) {
         </div>
 
         {!isRowBeingDragged ? (
-          <div
-            ref={setDropAfterNodeRef}
-            className="pointer-events-none absolute inset-x-0 -bottom-3.5 z-20 h-7"
-          >
-            <div
-              className={`absolute inset-x-3 top-1/2 -translate-y-1/2 rounded-full bg-primary transition-all duration-150 ease-out ${
-                showDropTargets && isOverAfter
-                  ? "h-2.5 opacity-100"
-                  : "h-px scale-x-75 opacity-0"
-              }`}
-            />
-          </div>
+          <DropGapIndicator
+            setNodeRef={setDropAfterNodeRef}
+            isActive={showDropTargets && isOverAfter}
+            position="bottom"
+          />
         ) : null}
       </div>
     </TooltipProvider>
-  );
-}
-
-function TaskDragPlaceholder({ compact = false }: { compact?: boolean }) {
-  return (
-    <div
-      className={`w-full rounded-2xl squircle squircle-2xl border border-dashed border-foreground/30 bg-muted/30 ${
-        compact ? "min-h-4" : "min-h-6"
-      }`}
-    />
-  );
-}
-
-function MenuRow({
-  icon,
-  iconClass,
-  label,
-  onClick,
-  className,
-  disabled,
-}: {
-  icon: HugeIcon;
-  iconClass?: string;
-  label: string;
-  onClick: () => void;
-  className?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex items-center gap-1 rounded-xl px-1.5 py-1 text-sm font-normal transition-colors hover:bg-primary/15 disabled:opacity-50 disabled:cursor-not-allowed ${className || ""}`}
-    >
-      <Icon icon={icon} className={`size-4 ${iconClass || ""}`} />
-      <span className="font-semibold">{label}</span>
-    </button>
   );
 }

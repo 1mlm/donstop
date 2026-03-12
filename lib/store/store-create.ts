@@ -13,6 +13,12 @@ import {
   TODO_STORE_STORAGE_KEY,
   validatePersistedState,
 } from "./store-model";
+import {
+  applyTaskMovePlan,
+  computeTaskMovePlan,
+  createTaskRepositionActivity,
+  type TaskMovePlacement,
+} from "./store-move";
 
 export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   createTask: (label: string, parentId?: TaskID) => TaskID | null;
@@ -31,7 +37,7 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   moveTask: (
     taskID: TaskID,
     targetTaskID: TaskID,
-    placement: "before" | "after" | "inside",
+    placement: TaskMovePlacement,
   ) => boolean;
   deleteTask: (taskID: TaskID) => boolean;
   logTaskCopied: (taskID: TaskID, target: "id" | "name") => void;
@@ -51,6 +57,26 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   getTaskChildrenIDs: (taskID: TaskID) => TaskID[];
   hasActiveChildRecursive: (taskID: TaskID) => boolean;
 };
+
+function isLegacySeededFakeState(state: ReturnType<typeof createDefaultState>) {
+  if (state.activeSession !== null) {
+    return false;
+  }
+
+  if (state.history.length > 0 || state.activity.length > 0) {
+    return false;
+  }
+
+  const generatedFakeTasks = createFakeTasks();
+
+  if (state.tasks.length !== generatedFakeTasks.length) {
+    return false;
+  }
+
+  const fakeTaskIDs = new Set(generatedFakeTasks.map((task) => task.id));
+
+  return state.tasks.every((task) => fakeTaskIDs.has(task.id));
+}
 
 function collectDescendantsByParent(
   tasks: TaskObj[],
@@ -660,97 +686,23 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             return false;
           }
 
-          const oldParentID = movingTask.parentId;
-          const destinationParentID =
-            placement === "inside" ? targetTaskID : targetTask.parentId;
+          const movePlan = computeTaskMovePlan(
+            currentTasks,
+            movingTask,
+            targetTask,
+            placement,
+          );
 
-          const destinationSiblings = currentTasks
-            .filter(
-              (item) =>
-                item.parentId === destinationParentID && item.id !== taskID,
-            )
-            .sort(sortByPosition);
-
-          const targetIndex =
-            placement === "inside"
-              ? 0
-              : destinationSiblings.findIndex(
-                  (item) => item.id === targetTaskID,
-                );
-
-          if (placement !== "inside" && targetIndex < 0) {
+          if (!movePlan) {
             return false;
           }
 
-          const insertIndex =
-            placement === "before"
-              ? targetIndex
-              : placement === "after"
-                ? targetIndex + 1
-                : targetIndex;
-          const reorderedDestination = [...destinationSiblings];
-          reorderedDestination.splice(insertIndex, 0, {
-            ...movingTask,
-            parentId: destinationParentID,
-          });
-
-          if (oldParentID === destinationParentID) {
-            const currentOrder = currentTasks
-              .filter((item) => item.parentId === oldParentID)
-              .sort(sortByPosition)
-              .map((item) => item.id);
-            const nextOrder = reorderedDestination.map((item) => item.id);
-
-            const didChangeOrder =
-              currentOrder.length !== nextOrder.length ||
-              currentOrder.some((id, index) => nextOrder[index] !== id);
-
-            if (!didChangeOrder) {
-              return false;
-            }
-          }
-
-          const destinationPositionByID = new Map(
-            reorderedDestination.map((item, index) => [item.id, index]),
-          );
-
-          const previousSiblingPositionByID =
-            oldParentID !== destinationParentID
-              ? new Map(
-                  currentTasks
-                    .filter(
-                      (item) =>
-                        item.parentId === oldParentID && item.id !== taskID,
-                    )
-                    .sort(sortByPosition)
-                    .map((item, index) => [item.id, index]),
-                )
-              : null;
-
           set((state) => ({
-            tasks: state.tasks.map((item) => {
-              const destinationPosition = destinationPositionByID.get(item.id);
-              if (destinationPosition !== undefined) {
-                return {
-                  ...item,
-                  parentId: destinationParentID,
-                  position: destinationPosition,
-                };
-              }
-
-              const previousSiblingPosition = previousSiblingPositionByID?.get(
-                item.id,
-              );
-              if (previousSiblingPosition !== undefined) {
-                return {
-                  ...item,
-                  parentId: oldParentID,
-                  position: previousSiblingPosition,
-                };
-              }
-
-              return item;
-            }),
+            tasks: applyTaskMovePlan(state.tasks, movePlan),
+            activity: [
+              createTaskRepositionActivity(taskID, movingTask.label, movePlan),
+              ...state.activity,
+            ],
           }));
 
           return true;
@@ -851,6 +803,14 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             }
           } else {
             malikDebug("\u2B1C", "store localstorage valid");
+          }
+
+          if (validated.isValid && isLegacySeededFakeState(validated.state)) {
+            malikDebug("\u2B1C", "store legacy fake seed cleaned");
+            return {
+              ...currentState,
+              ...createDefaultState(tasks),
+            };
           }
 
           return {

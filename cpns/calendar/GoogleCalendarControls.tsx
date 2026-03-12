@@ -75,6 +75,10 @@ import {
 const CREATE_CALENDAR_VALUE = "__create_calendar__";
 const DEFAULT_NEW_CALENDAR_NAME = "DonStop";
 const GOOGLE_INTERACTION_ENABLED_KEY = "todo-app-google-interaction-enabled";
+const MOBILE_FULLSCREEN_MENU_CLASS =
+  "max-md:fixed max-md:inset-0 max-md:h-dvh max-md:w-screen max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:p-4 max-md:!left-0 max-md:!top-0 max-md:!transform-none";
+const MOBILE_FULLSCREEN_POPOVER_CLASS =
+  "max-md:fixed max-md:inset-0 max-md:h-dvh max-md:w-screen max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:p-4 max-md:!left-0 max-md:!top-0 max-md:!transform-none";
 
 function getEventStartTimestamp(event: GoogleCalendarEventItem) {
   const raw = event.start?.dateTime || event.start?.date;
@@ -154,7 +158,10 @@ export default function GoogleCalendarControls() {
             Google Calendar not available
           </Button>
         </PopoverTrigger>
-        <PopoverContent side="bottom" className="w-80 max-w-[calc(100vw-2rem)]">
+        <PopoverContent
+          side="bottom"
+          className={`w-80 max-w-[calc(100vw-2rem)] ${MOBILE_FULLSCREEN_POPOVER_CLASS}`}
+        >
           <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
             <p className="font-medium text-foreground">
               Google Calendar integration is optional.
@@ -632,7 +639,7 @@ function GoogleCalendarControlsInner() {
           </DropdownMenuTrigger>
           <DropdownMenuContent
             side="bottom"
-            className="w-96 max-w-[calc(100vw-2rem)] p-2"
+            className={`w-96 max-w-[calc(100vw-2rem)] p-2 ${MOBILE_FULLSCREEN_MENU_CLASS}`}
           >
             <DropdownMenuLabel>
               Why integrate Google Calendar?
@@ -688,7 +695,7 @@ function GoogleCalendarControlsInner() {
         </DropdownMenuTrigger>
         <DropdownMenuContent
           side="bottom"
-          className="w-96 max-w-[calc(100vw-2rem)] p-2"
+          className={`w-96 max-w-[calc(100vw-2rem)] p-2 ${MOBILE_FULLSCREEN_MENU_CLASS}`}
         >
           <DropdownMenuLabel className="text-destructive">
             Google Calendar Error
@@ -765,7 +772,7 @@ function GoogleCalendarControlsInner() {
 
         <DropdownMenuContent
           side="bottom"
-          className="w-80 max-w-[calc(100vw-2rem)] p-0 overflow-hidden"
+          className={`w-80 max-w-[calc(100vw-2rem)] p-0 overflow-hidden ${MOBILE_FULLSCREEN_MENU_CLASS} max-md:overflow-y-auto`}
         >
           {/* Profile row */}
           <div className="flex items-center gap-3 px-3 py-3">
@@ -1030,7 +1037,7 @@ function GoogleCalendarControlsInner() {
                       </span>
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-3xl">
+                  <AlertDialogContent className="max-w-3xl max-md:h-dvh max-md:w-screen max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:p-4">
                     <AlertDialogHeader>
                       <AlertDialogTitle>
                         Google Calendar Events

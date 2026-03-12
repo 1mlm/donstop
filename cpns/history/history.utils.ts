@@ -1,5 +1,38 @@
 import type { HistoryActivityItem, TaskHistoryEntry } from "@/lib/types";
 
+type RepositionTargetDescriptor =
+  | "to_start"
+  | "to_end"
+  | "between"
+  | "single_item"
+  | "unknown";
+
+export function getTaskRepositionDescription(item: HistoryActivityItem) {
+  const before = item.moveBeforeTaskLabel;
+  const after = item.moveAfterTaskLabel;
+  const parent = item.moveDestinationParentLabel;
+
+  let targetDescriptor: RepositionTargetDescriptor = "unknown";
+
+  if (before && after) {
+    targetDescriptor = "between";
+  } else if (!before && after) {
+    targetDescriptor = "to_start";
+  } else if (before && !after) {
+    targetDescriptor = "to_end";
+  } else if (!before && !after) {
+    targetDescriptor = "single_item";
+  }
+
+  return {
+    parent,
+    before,
+    after,
+    targetDescriptor,
+    isSubtaskMove: Boolean(parent),
+  };
+}
+
 export function getElapsedSecondsFromNow(
   isoString: string,
   nowMs = Date.now(),

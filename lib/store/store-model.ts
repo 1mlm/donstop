@@ -71,6 +71,7 @@ const historyActivityItemSchema = z.object({
     "task_session",
     "task_started",
     "task_transferred",
+    "task_repositioned",
     "task_finished",
     "task_restored",
     "task_cancelled",
@@ -90,6 +91,9 @@ const historyActivityItemSchema = z.object({
   newLabel: z.string().optional(),
   sourceTaskLabel: z.string().optional(),
   copyTarget: z.enum(["id", "name"]).optional(),
+  moveDestinationParentLabel: z.string().optional(),
+  moveBeforeTaskLabel: z.string().optional(),
+  moveAfterTaskLabel: z.string().optional(),
 });
 
 const persistedTodoStateSchema = z.object({

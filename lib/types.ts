@@ -35,6 +35,7 @@ export type HistoryActivityKind =
   | "task_session"
   | "task_started"
   | "task_transferred"
+  | "task_repositioned"
   | "calendar_synced"
   | "calendar_sync_failed"
   | "task_finished"
@@ -57,4 +58,7 @@ export type HistoryActivityItem = {
   newLabel?: string;
   sourceTaskLabel?: string;
   copyTarget?: "id" | "name";
+  moveDestinationParentLabel?: string;
+  moveBeforeTaskLabel?: string;
+  moveAfterTaskLabel?: string;
 };
