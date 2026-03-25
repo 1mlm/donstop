@@ -58,23 +58,18 @@ export default function HistoryMenu() {
 
   if (isEmpty) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full squircle squircle-full px-3 cursor-pointer disabled:cursor-not-allowed"
-              disabled
-              aria-label="History"
-            >
-              <Icon icon={NewsIcon} />
-              Empty History
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>History is empty.</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <span className="inline-flex cursor-not-allowed">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full squircle squircle-full px-3 opacity-50 hover:bg-transparent"
+          disabled
+          aria-label="History"
+        >
+          <Icon icon={NewsIcon} />
+          Empty History
+        </Button>
+      </span>
     );
   }
 
@@ -85,7 +80,7 @@ export default function HistoryMenu() {
           <Button
             variant="outline"
             size="sm"
-            className="rounded-full squircle squircle-full px-3"
+            className="rounded-full squircle squircle-full hover-hand px-3"
           >
             <Icon icon={NewsIcon} />
             History
@@ -109,19 +104,27 @@ export default function HistoryMenu() {
               </span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 px-0 cursor-pointer disabled:cursor-not-allowed"
-                    aria-label="Clear history"
-                    onClick={() => {
-                      clearHistory();
-                      setIsMenuOpen(false);
-                    }}
-                    disabled={history.length === 0 && activity.length === 0}
+                  <span
+                    className={
+                      history.length === 0 && activity.length === 0
+                        ? "inline-flex cursor-not-allowed"
+                        : "inline-flex cursor-pointer"
+                    }
                   >
-                    <Icon icon={PaintBrush04Icon} />
-                  </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 px-0"
+                      aria-label="Clear history"
+                      onClick={() => {
+                        clearHistory();
+                        setIsMenuOpen(false);
+                      }}
+                      disabled={history.length === 0 && activity.length === 0}
+                    >
+                      <Icon icon={PaintBrush04Icon} />
+                    </Button>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>Clear history</TooltipContent>
               </Tooltip>

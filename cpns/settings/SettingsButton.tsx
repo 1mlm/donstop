@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowDown01Icon,
   BlackHole01Icon,
   CamperIcon,
   CursorMagicSelection04Icon,
@@ -59,6 +60,10 @@ export default function SettingsButton() {
         >
           <Icon icon={Settings01Icon} />
           <span>Settings</span>
+          <Icon
+            icon={ArrowDown01Icon}
+            className={`transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
+          />
         </Button>
       </PopoverTrigger>
 

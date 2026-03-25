@@ -137,6 +137,15 @@
       url("/pointer.svg?v=4") 7 4,
       pointer;
   }
+
+  /* map default not-allowed class to custom cursor when enabled */
+  body.custom-cursor-enabled .cursor-not-allowed,
+  body.custom-cursor-enabled .disabled,
+  body.custom-cursor-enabled [disabled] {
+    cursor:
+      url("/not-allowed.svg?v=4") 8 3,
+      not-allowed;
+  }
 }
 
 @layer components {
@@ -156,6 +165,12 @@
     cursor:
       url("/info.svg?v=4") 8 3,
       help;
+  }
+
+  body.custom-cursor-enabled .cursor-not-allowed-custom {
+    cursor:
+      url("/not-allowed.svg?v=4") 8 3,
+      not-allowed;
   }
 
   body.custom-cursor-enabled .cursor-grab-custom {

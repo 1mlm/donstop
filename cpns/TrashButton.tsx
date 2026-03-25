@@ -20,16 +20,24 @@ export default function TrashButton() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-full squircle squircle-full px-3 cursor-pointer disabled:cursor-not-allowed"
-          aria-label="Trash"
-          disabled={!hasDeleted}
+        <span
+          className={
+            hasDeleted
+              ? "inline-flex cursor-pointer-custom"
+              : "inline-flex cursor-not-allowed-custom"
+          }
         >
-          <Icon icon={Delete01Icon} />
-          {hasDeleted ? "Trash" : "Empty Trash"}
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full squircle squircle-full px-3"
+            aria-label="Trash"
+            disabled={!hasDeleted}
+          >
+            <Icon icon={Delete01Icon} />
+            {hasDeleted ? "Trash" : "Empty Trash"}
+          </Button>
+        </span>
       </PopoverTrigger>
       <PopoverContent className="max-w-md w-80">
         <PopoverHeader>
