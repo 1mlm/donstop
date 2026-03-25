@@ -58,7 +58,7 @@ export default function HistoryMenu() {
 
   if (isEmpty) {
     return (
-      <span className="inline-flex cursor-not-allowed">
+      <span className="inline-flex cursor-not-allowed-custom">
         <Button
           variant="outline"
           size="sm"
@@ -107,8 +107,8 @@ export default function HistoryMenu() {
                   <span
                     className={
                       history.length === 0 && activity.length === 0
-                        ? "inline-flex cursor-not-allowed"
-                        : "inline-flex cursor-pointer"
+                        ? "inline-flex cursor-not-allowed-custom"
+                        : "inline-flex cursor-pointer-custom"
                     }
                   >
                     <Button
