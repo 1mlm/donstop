@@ -105,7 +105,10 @@ export function AppCredits({ className }: { className?: string }) {
 
       <span>by</span>
 
-      <CreditLink href="https://github.com/1mlm">
+      <CreditLink
+        href="https://github.com/1mlm"
+        title={"Malik Lahlou ( ptdrrrrrr.t.ki@gmail.com )"}
+      >
         <span
           aria-hidden
           className="size-5 rounded-full bg-cover bg-center"
@@ -123,10 +126,19 @@ export function AppCredits({ className }: { className?: string }) {
   );
 }
 
-function CreditLink({ href, children }: { href: string; children: ReactNode }) {
+function CreditLink({
+  href,
+  title,
+  children,
+}: {
+  href: string;
+  title?: string;
+  children: ReactNode;
+}) {
   return (
     <a
       href={href}
+      title={title}
       target="_blank"
       rel="noreferrer"
       className={CREDIT_LINK_CLASS}
