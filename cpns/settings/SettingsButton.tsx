@@ -2,6 +2,7 @@
 
 import {
   BlackHole01Icon,
+  CamperIcon,
   CursorMagicSelection04Icon,
   Settings01Icon,
   TestTube01Icon,
@@ -103,6 +104,19 @@ export default function SettingsButton() {
 
           <SettingRow icon={BlackHole01Icon} title="Erase everything">
             <ResetAllButton />
+          </SettingRow>
+
+          <SettingRow icon={CamperIcon} title="Show tour">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                window.dispatchEvent(new Event("show-welcome-tour"))
+              }
+            >
+              Show tour
+            </Button>
           </SettingRow>
 
           <SettingRow icon={TestTube01Icon} title="Populate fake data">

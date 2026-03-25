@@ -5,10 +5,12 @@ import { Icon } from "@/cpns/Icon";
 import MainBar from "@/cpns/MainBar";
 import { AppCredits, AppTopBar, TopControls } from "@/cpns/page";
 import { TaskBar } from "@/cpns/task";
+import WelcomeTour from "@/cpns/WelcomeTour";
 
 export default function HomePage() {
   return (
     <CustomProvider>
+      <WelcomeTour />
       <div className="relative min-h-screen w-full overflow-x-hidden md:h-screen md:overflow-hidden">
         <div className="flex flex-col gap-3 p-3 pb-5 md:hidden">
           <div className="rounded-2xl border bg-card/70 p-2">

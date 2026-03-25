@@ -301,6 +301,13 @@ export default function ResetAllButton() {
 
               wipeAllData();
               setIsOpen(false);
+              // refresh the page so the app re-initializes with cleared data
+              try {
+                window.location.reload();
+              } catch {
+                // fallback
+                location.reload();
+              }
             }}
           >
             {isWaitDone ? "Delete Everything" : "Read first"}
