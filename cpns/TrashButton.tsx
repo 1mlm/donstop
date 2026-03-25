@@ -23,7 +23,7 @@ export default function TrashButton() {
         <Button
           variant="outline"
           size="sm"
-          className="rounded-full squircle squircle-full px-3"
+          className="rounded-full squircle squircle-full px-3 cursor-pointer disabled:cursor-not-allowed"
           aria-label="Trash"
           disabled={!hasDeleted}
         >

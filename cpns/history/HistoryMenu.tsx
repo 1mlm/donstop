@@ -64,7 +64,7 @@ export default function HistoryMenu() {
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full squircle squircle-full px-3"
+              className="rounded-full squircle squircle-full px-3 cursor-pointer disabled:cursor-not-allowed"
               disabled
               aria-label="History"
             >
@@ -112,7 +112,7 @@ export default function HistoryMenu() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 w-8 px-0"
+                    className="h-8 w-8 px-0 cursor-pointer disabled:cursor-not-allowed"
                     aria-label="Clear history"
                     onClick={() => {
                       clearHistory();

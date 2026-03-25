@@ -1,4 +1,10 @@
-import { ArrowUpRight01Icon, Github } from "@hugeicons/core-free-icons";
+import {
+  ArrowUpRight01Icon,
+  Github,
+  LicenseIcon,
+  PolicyIcon,
+} from "@hugeicons/core-free-icons";
+import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 import GoogleCalendarControls from "@/cpns/calendar/GoogleCalendarControls";
 import HistoryMenu from "@/cpns/history/HistoryMenu";
@@ -6,6 +12,8 @@ import { Icon } from "@/cpns/Icon";
 import { SettingsButton } from "@/cpns/settings";
 import TrashButton from "@/cpns/TrashButton";
 import { cn } from "@/shadcn/lib/utils";
+import { Button } from "@/shadcn/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/shadcn/ui/tooltip";
 
 const CREDIT_LINK_CLASS =
   "inline-flex items-center gap-1.5 rounded-full squircle squircle-full border border-accent/60 bg-card px-2 py-0.5 select-none transition-opacity duration-75 hover:opacity-80";
@@ -26,12 +34,50 @@ export function AppTopBar() {
   );
 }
 
+// Right-side small buttons placed next to settings
+function RightControls() {
+  return (
+    <div className="flex items-center gap-2">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href="/privacy-policy" aria-label="Privacy Policy">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full squircle squircle-full px-3"
+            >
+              <Icon icon={PolicyIcon} className="size-4" />
+            </Button>
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent>Privacy Policy</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href="/terms-n-conditions" aria-label="Terms and Conditions">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full squircle squircle-full px-3"
+            >
+              <Icon icon={LicenseIcon} className="size-4" />
+            </Button>
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent>Terms and Conditions</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
+
 export function TopControls({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {TOP_CONTROLS.map((Control) => (
         <Control key={Control.name} />
       ))}
+      <RightControls />
     </div>
   );
 }

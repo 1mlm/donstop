@@ -13,7 +13,6 @@ import { useTODOStore } from "@/lib/store";
 import { Button } from "@/shadcn/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import { Switch } from "@/shadcn/ui/switch";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
 import { PrimaryColorSection } from "./PrimaryColorSection";
 import { SettingRow } from "./SettingRow";
@@ -51,22 +50,17 @@ export default function SettingsButton() {
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={SETTINGS_TRIGGER_CLASS}
-              aria-label="Settings"
-            >
-              <Icon icon={Settings01Icon} />
-              <span>Settings</span>
-            </Button>
-          </PopoverTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Settings</TooltipContent>
-      </Tooltip>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={SETTINGS_TRIGGER_CLASS}
+          aria-label="Settings"
+        >
+          <Icon icon={Settings01Icon} />
+          <span>Settings</span>
+        </Button>
+      </PopoverTrigger>
 
       <PopoverContent align="end" className={SETTINGS_PANEL_CLASS}>
         <div className={SETTINGS_SECTION_STACK_CLASS}>
