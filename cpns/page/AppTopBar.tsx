@@ -13,6 +13,7 @@ import { SettingsButton } from "@/cpns/settings";
 import TrashButton from "@/cpns/TrashButton";
 import { cn } from "@/shadcn/lib/utils";
 import { Button } from "@/shadcn/ui/button";
+import { ButtonGroup } from "@/shadcn/ui/button-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shadcn/ui/tooltip";
 
 const CREDIT_LINK_CLASS =
@@ -37,36 +38,39 @@ export function AppTopBar() {
 // Right-side small buttons placed next to settings
 function RightControls() {
   return (
-    <div className="flex items-center gap-2">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link href="/privacy-policy" aria-label="Privacy Policy">
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full squircle squircle-full px-3"
-            >
-              <Icon icon={PolicyIcon} className="size-4" />
-            </Button>
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent>Privacy Policy</TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link href="/terms-n-conditions" aria-label="Terms and Conditions">
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full squircle squircle-full px-3"
-            >
-              <Icon icon={LicenseIcon} className="size-4" />
-            </Button>
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent>Terms and Conditions</TooltipContent>
-      </Tooltip>
+    <div className="flex items-center">
+      <ButtonGroup>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link href="/privacy-policy" aria-label="Privacy Policy">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full squircle rounded-r-none! px-3"
+              >
+                <Icon icon={PolicyIcon} className="size-4" />
+              </Button>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent>Privacy Policy</TooltipContent>
+        </Tooltip>
+      </ButtonGroup>
+      <ButtonGroup>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link href="/terms-n-conditions" aria-label="Terms and Conditions">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full squircle rounded-l-none! px-3"
+              >
+                <Icon icon={LicenseIcon} className="size-4" />
+              </Button>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent>Terms and Conditions</TooltipContent>
+        </Tooltip>
+      </ButtonGroup>
     </div>
   );
 }
