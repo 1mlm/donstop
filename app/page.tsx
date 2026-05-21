@@ -20,12 +20,9 @@ export default function HomePage() {
       <ActiveTaskIndicator />
       <WelcomeTour />
       {DevToolbar && <DevToolbar />}
-      <div className="relative min-h-screen w-full overflow-x-hidden md:h-screen md:overflow-hidden">
-        <div className="flex flex-col gap-3 p-3 pb-5 md:hidden">
-          <div className="rounded-2xl border bg-card/70 p-2">
-            <TopControls className="flex-wrap" />
-          </div>
-
+      <div className="relative min-h-screen w-full overflow-x-hidden lg:h-screen lg:overflow-hidden">
+        {/* Mobile layout (<lg): timer → tasks → controls+credits */}
+        <div className="flex flex-col gap-3 p-3 pb-5 lg:hidden">
           <div className="h-[34vh] min-h-[15rem]">
             <MainBar />
           </div>
@@ -38,10 +35,15 @@ export default function HomePage() {
             <TaskBar />
           </div>
 
+          <div className="rounded-2xl border bg-card/70 p-2">
+            <TopControls className="flex-wrap" />
+          </div>
+
           <AppCredits className="justify-center border-t border-border/70 pt-3" />
         </div>
 
-        <div className="relative hidden h-screen w-screen overflow-hidden pt-16 md:flex">
+        {/* Desktop layout (≥lg): tasks left | timer right | top bar absolute */}
+        <div className="relative hidden h-screen w-screen overflow-hidden pt-16 lg:flex">
           <div className="flex h-full w-1/3 flex-col items-center p-3 pt-1">
             <div className="mb-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground">
               <Icon icon={Note05Icon} className="size-4" />

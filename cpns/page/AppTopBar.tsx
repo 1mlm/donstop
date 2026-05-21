@@ -28,7 +28,7 @@ const TOP_CONTROLS = [
 
 export function AppTopBar() {
   return (
-    <div className="absolute inset-x-0 top-0 hidden items-center justify-between px-6 pt-2 md:flex">
+    <div className="absolute inset-x-0 top-0 hidden items-center justify-between px-6 pt-2 lg:flex">
       <AppCredits />
       <TopControls />
     </div>

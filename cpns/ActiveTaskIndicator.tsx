@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { useTODOStore } from "@/lib/store";
 
+const SIZE = 32;
+const RADIUS = 7;
+const PAD = 3;
+
 let cachedIconImg: HTMLImageElement | null = null;
 
 function loadIconImg(): Promise<HTMLImageElement> {
@@ -18,26 +22,34 @@ function loadIconImg(): Promise<HTMLImageElement> {
   });
 }
 
-function makeRedFaviconUrl(img: HTMLImageElement): string {
+function makeFaviconUrl(img: HTMLImageElement, active: boolean): string {
   const canvas = document.createElement("canvas");
-  canvas.width = 32;
-  canvas.height = 32;
+  canvas.width = SIZE;
+  canvas.height = SIZE;
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
-  ctx.drawImage(img, 0, 0, 32, 32);
-  // Tint all opaque pixels red, preserving transparency
-  ctx.globalCompositeOperation = "source-atop";
-  ctx.fillStyle = "#ef4444";
-  ctx.fillRect(0, 0, 32, 32);
+
+  // Rounded square background
+  ctx.beginPath();
+  ctx.roundRect(0, 0, SIZE, SIZE, RADIUS);
+  ctx.fillStyle = active ? "#ef4444" : "#ffffff";
+  ctx.fill();
+
+  // Icon centered with padding
+  ctx.drawImage(img, PAD, PAD, SIZE - PAD * 2, SIZE - PAD * 2);
+
+  // Active: tint icon white so it reads on the red bg
+  if (active) {
+    ctx.globalCompositeOperation = "source-atop";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(PAD, PAD, SIZE - PAD * 2, SIZE - PAD * 2);
+  }
+
   return canvas.toDataURL();
 }
 
 async function setFavicon(active: boolean) {
   let link = document.querySelector<HTMLLinkElement>("link#dynamic-favicon");
-  if (!active) {
-    link?.remove();
-    return;
-  }
   if (!link) {
     link = document.createElement("link");
     link.id = "dynamic-favicon";
@@ -46,10 +58,10 @@ async function setFavicon(active: boolean) {
   }
   try {
     const img = await loadIconImg();
-    link.href = makeRedFaviconUrl(img);
+    link.href = makeFaviconUrl(img, active);
   } catch {
-    // fallback green square if icon.png fails
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#ef4444"/></svg>`;
+    const bg = active ? "#ef4444" : "#ffffff";
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="${bg}"/></svg>`;
     link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
   }
 }
