@@ -160,7 +160,9 @@ export function getTaskDurationLabel({
     return formatPreviewTime(storedSeconds);
   }
 
-  return `${formatPreviewTime(storedSeconds) ?? "0s"} + ${formatPreviewTime(runningSeconds) ?? "0s"}`;
+  const stored = formatPreviewTime(storedSeconds);
+  const running = formatPreviewTime(runningSeconds) ?? "0s";
+  return stored ? `${stored} + ${running}` : running;
 }
 
 export function parseTaskDropTarget(overID: string) {

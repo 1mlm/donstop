@@ -3,12 +3,22 @@
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArrowDataTransferDiagonalIcon,
   ChevronDown,
+  Clock01Icon,
+  Copy01Icon,
   Delete02Icon,
+  Edit03Icon,
   Favorite,
-  MoreIcon,
+  FavouriteIcon,
+  HeartbreakIcon,
+  MoreHorizontalSquare01Icon,
+  PartyIcon,
   Play,
   StopIcon,
+  TextFontIcon,
+  Tick02Icon,
+  Undo03Icon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { AnimatePresence, motion } from "motion/react";
@@ -18,8 +28,6 @@ import { useTaskRunningSeconds } from "@/lib/live-task";
 import { MOTION_PROPS } from "@/lib/motion";
 import { type TaskID, useTODOStore } from "@/lib/store";
 import { formatPreviewTime } from "@/lib/util";
-import { Button } from "@/shadcn/ui/button";
-import { Input } from "@/shadcn/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import {
   Tooltip,
@@ -32,6 +40,7 @@ import { useTaskDndContext } from "./TaskDndContext";
 import TaskList from "./TaskList";
 import {
   DropGapIndicator,
+  type MenuGroup,
   TaskActionsMenu,
   TaskDragPlaceholder,
 } from "./task.components";
@@ -41,14 +50,8 @@ import {
   useTaskCollapseWhileDraggingEffect,
   useTaskEditableFocusEffect,
   useTaskEditValueSyncEffect,
-  useTaskTimeoutCleanupEffect,
 } from "./task.effects";
 import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
-
-const OPEN_ACTIONS_DELAY_MS = 500;
-const CLOSE_ACTIONS_DELAY_MS = 150;
-const OPEN_ELEMENT_DELAY_MS = 45;
-const CLOSE_ELEMENT_DELAY_MS = 120;
 
 function formatDurationInputValue(totalSeconds: number) {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -103,34 +106,10 @@ function parseDurationInputValue(raw: string) {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
-function clearTimer(timerRef: React.MutableRefObject<number | null>) {
-  if (timerRef.current === null) {
-    return;
-  }
-
-  window.clearTimeout(timerRef.current);
-  timerRef.current = null;
-}
-
-function scheduleTimer(
-  timerRef: React.MutableRefObject<number | null>,
-  delayMs: number,
-  callback: () => void,
-) {
-  clearTimer(timerRef);
-  timerRef.current = window.setTimeout(() => {
-    callback();
-    timerRef.current = null;
-  }, delayMs);
-}
-
 export function Task({ taskID }: { taskID: TaskID }) {
   // All useState and useRef declarations must come first (no duplicates)
   const [isTaskHovered, setIsTaskHovered] = useState(false);
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false);
-  const [elementMenuOpen, setElementMenuOpen] = useState<
-    "name" | "time" | null
-  >(null);
   const [editMode, setEditMode] = useState<"name" | null>(null);
   const [editNameValue, setEditNameValue] = useState("");
   const [isTimePopoverOpen, setIsTimePopoverOpen] = useState(false);
@@ -143,10 +122,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const taskHeaderRowRef = useRef<HTMLDivElement | null>(null);
   const editInputRef = useRef<HTMLSpanElement | null>(null);
   const actionsTriggerRef = useRef<HTMLDivElement | null>(null);
-  const openActionsTimeoutRef = useRef<number | null>(null);
-  const closeActionsTimeoutRef = useRef<number | null>(null);
-  const openElementTimeoutRef = useRef<number | null>(null);
-  const closeElementTimeoutRef = useRef<number | null>(null);
 
   // Close actions menu on outside tap (mobile)
   useEffect(() => {
@@ -164,7 +139,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
       if (menu?.contains(e.target as Node)) return;
       if (actionsTriggerRef.current?.contains(e.target as Node)) return;
       setActionsMenuOpen(false);
-      setElementMenuOpen(null);
     }
     window.addEventListener("pointerdown", handlePointerDown, {
       capture: true,
@@ -219,10 +193,8 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const hasActiveChild = hasActiveChildRecursive(taskID);
   const { draggingTaskID, draggingDescendantIDs } = useTaskDndContext();
   const shouldShowRowControls =
-    (!draggingTaskID && isTaskHovered) ||
-    actionsMenuOpen ||
-    elementMenuOpen !== null;
-  const isAnyMenuOpen = actionsMenuOpen || elementMenuOpen !== null;
+    (!draggingTaskID && isTaskHovered) || actionsMenuOpen;
+  const isAnyMenuOpen = actionsMenuOpen;
   const prevChildrenCountRef = useRef(childrenIDs.length);
 
   // No need to sync to Map; state is now persisted in store
@@ -293,13 +265,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
     editInputRef,
   });
 
-  useTaskTimeoutCleanupEffect([
-    openActionsTimeoutRef,
-    closeActionsTimeoutRef,
-    openElementTimeoutRef,
-    closeElementTimeoutRef,
-  ]);
-
   useEffect(() => {
     if (!isTaskHovered || isAnyMenuOpen || isRowBeingDragged) {
       return;
@@ -329,9 +294,38 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
   const closeMenus = () => {
     setActionsMenuOpen(false);
-    setElementMenuOpen(null);
     setIsTaskHovered(false);
   };
+
+  useEffect(() => {
+    if (!actionsMenuOpen) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      const trigger = actionsTriggerRef.current;
+      const menu = document.querySelector(
+        `[data-task-actions-menu="${taskID}"]`,
+      );
+      const target = e.target as Node;
+      if (!trigger?.contains(target) && !menu?.contains(target)) {
+        setActionsMenuOpen(false);
+        setIsTaskHovered(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActionsMenuOpen(false);
+        setIsTaskHovered(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown, true);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [actionsMenuOpen, taskID]);
 
   const updateActionsMenuPosition = useCallback(() => {
     const trigger = actionsTriggerRef.current;
@@ -341,54 +335,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
     setActionsMenuPos({ left: rect.left, top: rect.bottom + 2 });
   }, []);
 
-  const scheduleOpenActionsMenu = () => {
-    if (actionsMenuOpen) {
-      return;
-    }
-
-    clearTimer(closeActionsTimeoutRef);
-    scheduleTimer(openActionsTimeoutRef, OPEN_ACTIONS_DELAY_MS, () => {
-      updateActionsMenuPosition();
-      setActionsMenuOpen(true);
-    });
-  };
-
   const toggleActionsMenu = () => {
-    clearTimer(openActionsTimeoutRef);
-    clearTimer(closeActionsTimeoutRef);
     updateActionsMenuPosition();
-    setActionsMenuOpen((previous) => {
-      const next = !previous;
-
-      if (!next) {
-        setElementMenuOpen(null);
-      }
-
-      return next;
-    });
-  };
-
-  const scheduleCloseActionsMenu = () => {
-    clearTimer(openActionsTimeoutRef);
-    scheduleTimer(closeActionsTimeoutRef, CLOSE_ACTIONS_DELAY_MS, () => {
-      setActionsMenuOpen(false);
-      setElementMenuOpen(null);
-    });
-  };
-
-  const scheduleOpenElementMenu = (key: "name" | "time") => {
-    clearTimer(closeElementTimeoutRef);
-    scheduleTimer(openElementTimeoutRef, OPEN_ELEMENT_DELAY_MS, () => {
-      updateActionsMenuPosition();
-      setElementMenuOpen(key);
-    });
-  };
-
-  const scheduleCloseElementMenu = () => {
-    clearTimer(openElementTimeoutRef);
-    scheduleTimer(closeElementTimeoutRef, CLOSE_ELEMENT_DELAY_MS, () => {
-      setElementMenuOpen(null);
-    });
+    setActionsMenuOpen((previous) => !previous);
   };
 
   const toggleExpanded = () => {
@@ -411,7 +360,6 @@ export function Task({ taskID }: { taskID: TaskID }) {
       if (target) {
         logTaskCopied(taskID, target);
       }
-      setElementMenuOpen(null);
     } catch {
       // Ignore clipboard errors silently.
     }
@@ -448,6 +396,132 @@ export function Task({ taskID }: { taskID: TaskID }) {
   };
 
   if (!task) return null;
+
+  const menuGroups: MenuGroup[] = [
+    {
+      id: "actions",
+      items: [
+        {
+          id: "transfer",
+          icon: ArrowDataTransferDiagonalIcon,
+          label: "Transfer",
+          onClick: handleTransfer,
+          visible: !isActive && !!activeTaskID && activeTaskID !== taskID,
+        },
+        {
+          id: "finish",
+          icon: PartyIcon,
+          label: "Finish",
+          onClick: isActive
+            ? () => {
+                finishActiveTask();
+                closeMenus();
+              }
+            : () => {
+                finishTask(taskID);
+                closeMenus();
+              },
+        },
+        {
+          id: "cancel",
+          icon: Undo03Icon,
+          label: "Cancel",
+          visible: isActive,
+          confirm: "Are you SURE you want to cancel all the time spent here?",
+          onClick: () => {
+            cancelActiveTask(true);
+            closeMenus();
+          },
+        },
+        {
+          id: "favorite",
+          icon: isFavorite ? HeartbreakIcon : FavouriteIcon,
+          label: isFavorite ? "Un-Favorite" : "Favorite",
+          onClick: () => toggleFavorite(taskID),
+        },
+      ],
+    },
+    {
+      id: "edit",
+      items: [
+        {
+          id: "name",
+          icon: TextFontIcon,
+          label: "Name",
+          submenu: [
+            {
+              id: "name-edit",
+              icon: Edit03Icon,
+              label: "Edit",
+              onClick: () => {
+                setEditNameValue(taskLabel);
+                setEditMode("name");
+                closeMenus();
+              },
+            },
+            {
+              id: "name-copy",
+              icon: Copy01Icon,
+              label: "Copy",
+              onClick: () => copyTaskValue(taskLabel, "name"),
+            },
+          ],
+        },
+        {
+          id: "time",
+          icon: Clock01Icon,
+          label: "Time",
+          submenu: [
+            {
+              id: "time-edit",
+              icon: Edit03Icon,
+              label: "Edit",
+              onClick: () => {
+                setEditTimeValue(formatDurationInputValue(taskStoredSeconds));
+                setTimeEditError(null);
+                setIsTimePopoverOpen(true);
+                closeMenus();
+              },
+            },
+            {
+              id: "time-copy",
+              icon: Copy01Icon,
+              label: "Copy",
+              onClick: () => copyTaskValue(String(taskStoredSeconds), null),
+            },
+            {
+              id: "time-reset",
+              icon: UndoIcon,
+              label: "Reset",
+              onClick: isActive
+                ? () => {
+                    resetActiveTaskDuration();
+                    closeMenus();
+                  }
+                : () => {
+                    resetTaskDuration(taskID);
+                    closeMenus();
+                  },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "destructive",
+      items: [
+        {
+          id: "delete",
+          icon: Delete02Icon,
+          label: "Delete",
+          onClick: tryDeleteTask,
+          disabled: isActive,
+          disabledReason: "Can't delete a currently active task",
+          danger: true,
+        },
+      ],
+    },
+  ];
 
   const taskDurationLabel = getTaskDurationLabel({
     isActive,
@@ -668,14 +742,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
                         : "-translate-x-1 scale-95 opacity-0 pointer-events-none"
                     }`}
                   >
-                    <div
-                      className="relative"
-                      ref={actionsTriggerRef}
-                      onMouseEnter={scheduleOpenActionsMenu}
-                      onMouseLeave={scheduleCloseActionsMenu}
-                    >
+                    <div className="relative" ref={actionsTriggerRef}>
                       <button
-                        className="rounded squircle squircle-lg bg-transparent p-1 transition-colors hover:bg-primary/15"
+                        className="rounded-full bg-transparent p-1 transition-colors hover:bg-primary/15"
                         aria-label="Task group options"
                         onClick={(event) => {
                           event.preventDefault();
@@ -684,74 +753,27 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           toggleActionsMenu();
                         }}
                       >
-                        <Icon icon={MoreIcon} className="size-4" />
+                        <Icon
+                          icon={MoreHorizontalSquare01Icon}
+                          className="size-4"
+                        />
                       </button>
 
                       <TaskActionsMenu
                         open={actionsMenuOpen}
                         position={actionsMenuPos}
                         taskID={taskID}
-                        isActive={isActive}
-                        activeTaskID={activeTaskID}
-                        isFavorite={isFavorite}
-                        elementMenuOpen={elementMenuOpen}
-                        onMouseEnterMenu={scheduleOpenActionsMenu}
-                        onMouseLeaveMenu={scheduleCloseActionsMenu}
-                        onMouseEnterName={() => scheduleOpenElementMenu("name")}
-                        onMouseLeaveName={scheduleCloseElementMenu}
-                        onMouseEnterTime={() => scheduleOpenElementMenu("time")}
-                        onMouseLeaveTime={scheduleCloseElementMenu}
-                        onStartEditName={() => {
-                          setEditNameValue(taskLabel);
-                          setEditMode("name");
-                          closeMenus();
-                        }}
-                        onStartEditTime={() => {
-                          setEditTimeValue(
-                            formatDurationInputValue(taskStoredSeconds),
-                          );
-                          setTimeEditError(null);
-                          setIsTimePopoverOpen(true);
-                          closeMenus();
-                        }}
-                        onTransfer={handleTransfer}
-                        onFinishActive={() => {
-                          finishActiveTask();
-                          closeMenus();
-                        }}
-                        onResetActiveDuration={() => {
-                          resetActiveTaskDuration();
-                          closeMenus();
-                        }}
-                        onCancelActive={() => {
-                          cancelActiveTask(true);
-                          closeMenus();
-                        }}
-                        onFinishTask={() => {
-                          finishTask(taskID);
-                          closeMenus();
-                        }}
-                        onResetTaskDuration={() => {
-                          resetTaskDuration(taskID);
-                          closeMenus();
-                        }}
-                        onToggleFavorite={() => toggleFavorite(taskID)}
-                        onDelete={tryDeleteTask}
-                        onCopyName={() => copyTaskValue(taskLabel, "name")}
-                        onCopyTime={() =>
-                          copyTaskValue(String(taskStoredSeconds), null)
-                        }
+                        groups={menuGroups}
                       />
                     </div>
 
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
-                          className="rounded squircle squircle-lg bg-transparent p-1 transition-colors hover:bg-primary/15"
+                          className="rounded-full bg-transparent p-1 transition-colors hover:bg-primary/15"
                           onClick={() => {
                             if (isActive) {
                               stopActiveTask();
-                              // Only close menu on desktop
                               if (
                                 typeof window !== "undefined" &&
                                 !(
@@ -759,14 +781,12 @@ export function Task({ taskID }: { taskID: TaskID }) {
                                   navigator.maxTouchPoints > 0
                                 )
                               ) {
-                                if (actionsMenuOpen || elementMenuOpen !== null)
-                                  setActionsMenuOpen(false);
+                                setActionsMenuOpen(false);
                               }
                               return;
                             }
 
                             startTask(taskID);
-                            // Only close menu on desktop
                             if (
                               typeof window !== "undefined" &&
                               !(
@@ -774,8 +794,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                                 navigator.maxTouchPoints > 0
                               )
                             ) {
-                              if (actionsMenuOpen || elementMenuOpen !== null)
-                                setActionsMenuOpen(false);
+                              setActionsMenuOpen(false);
                             }
                           }}
                           aria-label={isActive ? "Stop task" : "Start task"}
@@ -793,7 +812,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                   </div>
                 </div>
 
-                <span className="w-full truncate pl-0.5 text-left">
+                <span className="w-full truncate pl-0.5 text-left font-medium">
                   {isFinished && <span className="mr-1">• • • •</span>}
                   {editMode === "name" ? (
                     <span
@@ -841,7 +860,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="pl-1 text-xs text-primary-foreground/50 rounded-md transition-colors hover:text-primary-foreground/80"
+                        className={`pl-1 text-xs rounded-md transition-colors font-normal ${isActive ? "text-primary-foreground/50 hover:text-primary-foreground/80" : "text-muted-foreground/70 hover:text-muted-foreground"}`}
                         onClick={(event) => event.stopPropagation()}
                         onPointerDown={(event) => event.stopPropagation()}
                         aria-label="Edit task duration"
@@ -851,21 +870,18 @@ export function Task({ taskID }: { taskID: TaskID }) {
                     </PopoverTrigger>
                     <PopoverContent
                       align="start"
-                      className="w-64"
+                      className="w-auto p-2"
                       onOpenAutoFocus={(event) => event.preventDefault()}
                       onClick={(event) => event.stopPropagation()}
                       onPointerDown={(event) => event.stopPropagation()}
                     >
                       <div className="flex items-center gap-1">
-                        <Input
-                          id={`task-duration-${taskID}`}
+                        <input
                           autoFocus
                           value={editTimeValue}
                           onChange={(event) => {
                             setEditTimeValue(event.target.value);
-                            if (timeEditError) {
-                              setTimeEditError(null);
-                            }
+                            if (timeEditError) setTimeEditError(null);
                           }}
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
@@ -880,32 +896,22 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           }}
                           placeholder="hh:mm:ss"
                           aria-label="Task duration"
-                          style={{
-                            width: `${Math.max(6, editTimeValue.length)}ch`,
-                            minWidth: 60,
-                            maxWidth: 120,
-                          }}
-                          className="text-sm px-2 py-1 rounded border border-input bg-transparent focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                          className="w-24 rounded-lg bg-muted/60 px-2 py-1 font-mono text-sm tabular-nums outline-none placeholder:text-muted-foreground/50 focus:bg-muted focus:ring-1 focus:ring-ring/40"
                         />
-                        <Button
+                        <button
                           type="button"
-                          size="sm"
                           onClick={commitTimeEdit}
-                          className="ml-1"
+                          aria-label="Save duration"
+                          className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary"
                         >
-                          Save
-                        </Button>
+                          <Icon icon={Tick02Icon} className="size-4" />
+                        </button>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Accepts ss, mm:ss, or hh:mm:ss
+                      {timeEditError ? (
+                        <p className="mt-1 text-xs text-destructive">
+                          {timeEditError}
                         </p>
-                        {timeEditError ? (
-                          <p className="text-xs text-destructive mt-1">
-                            {timeEditError}
-                          </p>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </PopoverContent>
                   </Popover>
                 </span>
@@ -919,7 +925,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           if (!isRowBeingDragged) toggleExpanded();
                         }}
                         data-task-chevron
-                        className="relative p-1 rounded squircle squircle-lg transition-colors shrink-0"
+                        className="relative p-1 rounded-full transition-colors hover:bg-primary/15 shrink-0"
                         aria-label={
                           expanded ? "Collapse subtasks" : "Expand subtasks"
                         }

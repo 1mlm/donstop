@@ -1,18 +1,5 @@
-import {
-  ArrowDataTransferDiagonalIcon,
-  ArrowRight01Icon,
-  Clock01Icon,
-  Copy01Icon,
-  Delete02Icon,
-  Edit03Icon,
-  FavouriteIcon,
-  HeartbreakIcon,
-  PartyIcon,
-  TextFontIcon,
-  Undo03Icon,
-  UndoIcon,
-} from "@hugeicons/core-free-icons";
-import { useEffect, useState } from "react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   Tooltip,
@@ -21,6 +8,8 @@ import {
   TooltipTrigger,
 } from "@/shadcn/ui/tooltip";
 import { type HugeIcon, Icon } from "../Icon";
+
+// ─── Drop zone indicators ────────────────────────────────────────────────────
 
 export function DropGapIndicator({
   setNodeRef,
@@ -62,6 +51,8 @@ export function TaskDragPlaceholder({
   );
 }
 
+// ─── Menu primitives ─────────────────────────────────────────────────────────
+
 export function MenuRow({
   icon,
   iconClass,
@@ -69,6 +60,7 @@ export function MenuRow({
   onClick,
   className,
   disabled,
+  danger,
 }: {
   icon: HugeIcon;
   iconClass?: string;
@@ -76,255 +68,258 @@ export function MenuRow({
   onClick: () => void;
   className?: string;
   disabled?: boolean;
+  danger?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center gap-1 rounded-xl px-1.5 py-1 text-sm font-normal transition-colors hover:bg-primary/15 disabled:opacity-50 disabled:cursor-not-allowed ${className || ""}`}
+      className={`flex w-full items-center gap-1.5 rounded-xl px-1.5 py-1 text-sm font-normal transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        danger
+          ? "text-destructive hover:bg-destructive/15"
+          : "hover:bg-primary/15"
+      } ${className ?? ""}`}
     >
-      <Icon icon={icon} className={`size-4 ${iconClass || ""}`} />
+      <Icon icon={icon} className={`size-4 shrink-0 ${iconClass ?? ""}`} />
       <span className="font-semibold">{label}</span>
     </button>
   );
 }
 
-type TaskActionsMenuProps = {
-  open: boolean;
-  position: { left: number; top: number } | null;
-  taskID: string;
-  isActive: boolean;
-  activeTaskID?: string;
-  isFavorite: boolean;
-  elementMenuOpen: "name" | "time" | null;
-  onMouseEnterMenu: () => void;
-  onMouseLeaveMenu: () => void;
-  onMouseEnterName: () => void;
-  onMouseLeaveName: () => void;
-  onMouseEnterTime: () => void;
-  onMouseLeaveTime: () => void;
-  onStartEditName: () => void;
-  onStartEditTime: () => void;
-  onTransfer: () => void;
-  onFinishActive: () => void;
-  onResetActiveDuration: () => void;
-  onCancelActive: () => void;
-  onFinishTask: () => void;
-  onResetTaskDuration: () => void;
-  onToggleFavorite: () => void;
-  onDelete: () => void;
-  onCopyName: () => void;
-  onCopyTime: () => void;
+// ─── Declarative menu types ───────────────────────────────────────────────────
+
+export type SubmenuItem = {
+  id: string;
+  icon: HugeIcon;
+  label: string;
+  onClick: () => void;
 };
+
+export type MenuItem = {
+  id: string;
+  icon: HugeIcon;
+  label: string;
+  /** Called when item is clicked (or confirmed, if confirm is set) */
+  onClick?: () => void;
+  /** Defaults true. Set false to hide without removing from the array. */
+  visible?: boolean;
+  disabled?: boolean;
+  /** Tooltip shown when disabled */
+  disabledReason?: string;
+  /** Red danger styling */
+  danger?: boolean;
+  /** If set, clicking shows a confirmation panel with this message before calling onClick */
+  confirm?: string;
+  /** If set, hovering reveals a submenu to the right */
+  submenu?: SubmenuItem[];
+};
+
+export type MenuGroup = {
+  id: string;
+  items: MenuItem[];
+};
+
+// ─── Task actions menu ────────────────────────────────────────────────────────
+
+const SUB_OPEN_MS = 80;
+const SUB_CLOSE_MS = 130;
 
 export function TaskActionsMenu({
   open,
   position,
   taskID,
-  isActive,
-  activeTaskID,
-  isFavorite,
-  elementMenuOpen,
-  onMouseEnterMenu,
-  onMouseLeaveMenu,
-  onMouseEnterName,
-  onMouseLeaveName,
-  onMouseEnterTime,
-  onMouseLeaveTime,
-  onStartEditName,
-  onStartEditTime,
-  onTransfer,
-  onFinishActive,
-  onResetActiveDuration,
-  onCancelActive,
-  onFinishTask,
-  onResetTaskDuration,
-  onToggleFavorite,
-  onDelete,
-  onCopyName,
-  onCopyTime,
-}: TaskActionsMenuProps) {
-  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  groups,
+}: {
+  open: boolean;
+  position: { left: number; top: number } | null;
+  taskID: string;
+  groups: MenuGroup[];
+}) {
+  const [confirmOpenId, setConfirmOpenId] = useState<string | null>(null);
+  const [submenuOpenId, setSubmenuOpenId] = useState<string | null>(null);
+  const openSubRef = useRef<number | null>(null);
+  const closeSubRef = useRef<number | null>(null);
 
+  // Reset internal state when menu closes
   useEffect(() => {
     if (!open) {
-      setIsCancelConfirmOpen(false);
+      setConfirmOpenId(null);
+      setSubmenuOpenId(null);
     }
   }, [open]);
 
-  if (!open || !position) {
-    return null;
-  }
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (openSubRef.current !== null) window.clearTimeout(openSubRef.current);
+      if (closeSubRef.current !== null)
+        window.clearTimeout(closeSubRef.current);
+    };
+  }, []);
+
+  const scheduleOpenSubmenu = (id: string) => {
+    if (closeSubRef.current !== null) {
+      window.clearTimeout(closeSubRef.current);
+      closeSubRef.current = null;
+    }
+    openSubRef.current = window.setTimeout(() => {
+      setSubmenuOpenId(id);
+      openSubRef.current = null;
+    }, SUB_OPEN_MS);
+  };
+
+  const scheduleCloseSubmenu = () => {
+    if (openSubRef.current !== null) {
+      window.clearTimeout(openSubRef.current);
+      openSubRef.current = null;
+    }
+    closeSubRef.current = window.setTimeout(() => {
+      setSubmenuOpenId(null);
+      closeSubRef.current = null;
+    }, SUB_CLOSE_MS);
+  };
+
+  if (!open || !position) return null;
+
+  const visibleGroups = groups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => item.visible !== false),
+    }))
+    .filter((g) => g.items.length > 0);
 
   return createPortal(
     <TooltipProvider>
       <div
-        className="fixed z-[9999] w-40 rounded-2xl border bg-popover/92 p-1 text-popover-foreground shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 font-normal"
-        style={{
-          left: `${position.left}px`,
-          top: `${position.top}px`,
-        }}
-        onMouseEnter={onMouseEnterMenu}
-        onMouseLeave={onMouseLeaveMenu}
+        data-task-actions-menu={taskID}
+        className="fixed z-[9999] w-40 rounded-2xl border bg-popover/92 p-1 text-popover-foreground shadow-lg backdrop-blur-sm ring-1 ring-foreground/12"
+        style={{ left: `${position.left}px`, top: `${position.top}px` }}
       >
         <div className="flex flex-col gap-0.5">
-          {isActive ? (
-            <>
-              <MenuRow
-                icon={PartyIcon}
-                label="Finish"
-                onClick={onFinishActive}
-              />
-              <div className="relative">
-                <MenuRow
-                  icon={Undo03Icon}
-                  label="Cancel"
-                  onClick={() =>
-                    setIsCancelConfirmOpen((previous) => !previous)
-                  }
-                />
+          {visibleGroups.map((group, groupIndex) => (
+            <div key={group.id} className="contents">
+              {groupIndex > 0 && (
+                <div className="mx-1 my-0.5 border-t border-border/60" />
+              )}
 
-                <div
-                  className={`absolute left-full top-0 z-[10001] ml-2 w-56 rounded-2xl border bg-popover/95 p-2 text-popover-foreground shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 transition-all ${
-                    isCancelConfirmOpen
-                      ? "opacity-100 pointer-events-auto"
-                      : "opacity-0 pointer-events-none"
-                  }`}
-                >
-                  <p className="text-xs leading-relaxed text-foreground">
-                    Are you <strong>SURE</strong> you want to cancel all the
-                    time spent here?
-                  </p>
-                  <div className="mt-2 flex items-center justify-end gap-2">
-                    <button
-                      className="rounded-lg border border-border px-2 py-1 text-xs transition-colors hover:bg-muted"
-                      onClick={() => setIsCancelConfirmOpen(false)}
+              {group.items.map((item) => {
+                // ── Submenu item ──────────────────────────────────────────
+                if (item.submenu) {
+                  return (
+                    <div
+                      key={item.id}
+                      className="relative"
+                      onMouseEnter={() => scheduleOpenSubmenu(item.id)}
+                      onMouseLeave={scheduleCloseSubmenu}
                     >
-                      Keep
-                    </button>
-                    <button
-                      className="rounded-lg border border-destructive/40 px-2 py-1 text-xs text-destructive transition-colors hover:bg-destructive/10"
-                      onClick={() => {
-                        onCancelActive();
-                        setIsCancelConfirmOpen(false);
-                      }}
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <MenuRow
-                icon={isFavorite ? HeartbreakIcon : FavouriteIcon}
-                label={isFavorite ? "Un-Favorite" : "Favorite"}
-                onClick={onToggleFavorite}
-              />
-            </>
-          ) : (
-            <>
-              {activeTaskID && activeTaskID !== taskID ? (
-                <MenuRow
-                  icon={ArrowDataTransferDiagonalIcon}
-                  label="Transfer"
-                  onClick={onTransfer}
-                />
-              ) : null}
-              <MenuRow icon={PartyIcon} label="Finish" onClick={onFinishTask} />
-              <MenuRow
-                icon={isFavorite ? HeartbreakIcon : FavouriteIcon}
-                label={isFavorite ? "Un-Favorite" : "Favorite"}
-                onClick={onToggleFavorite}
-              />
-            </>
-          )}
+                      <button className="flex w-full items-center gap-1.5 rounded-xl px-1.5 py-1 text-sm transition-colors hover:bg-primary/15">
+                        <Icon icon={item.icon} className="size-4 shrink-0" />
+                        <span className="font-semibold">{item.label}</span>
+                        <Icon
+                          icon={ArrowRight01Icon}
+                          className="ml-auto size-4 shrink-0"
+                        />
+                      </button>
 
-          <div className="mx-1 my-0.5 border-t border-border/60" />
+                      <div
+                        className={`absolute left-full top-0.5 z-[10000] ml-2 w-28 overflow-hidden rounded-2xl border bg-popover/92 p-1 shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 transition-all ${
+                          submenuOpenId === item.id
+                            ? "pointer-events-auto opacity-100"
+                            : "pointer-events-none opacity-0"
+                        }`}
+                        onMouseEnter={() => scheduleOpenSubmenu(item.id)}
+                        onMouseLeave={scheduleCloseSubmenu}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          {item.submenu.map((sub) => (
+                            <MenuRow
+                              key={sub.id}
+                              icon={sub.icon}
+                              label={sub.label}
+                              onClick={sub.onClick}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
-          <div
-            className="relative"
-            onMouseEnter={onMouseEnterName}
-            onMouseLeave={onMouseLeaveName}
-          >
-            <button className="inline-flex w-full items-center gap-1 rounded-xl px-1.5 py-1 text-sm font-normal transition-colors hover:bg-primary/15">
-              <Icon icon={TextFontIcon} className="size-4" />
-              <span className="font-semibold">Name</span>
-              <Icon icon={ArrowRight01Icon} className="ml-auto size-4" />
-            </button>
+                // ── Confirmation item ─────────────────────────────────────
+                if (item.confirm) {
+                  return (
+                    <div key={item.id} className="relative">
+                      <MenuRow
+                        icon={item.icon}
+                        label={item.label}
+                        danger={item.danger}
+                        onClick={() =>
+                          setConfirmOpenId(
+                            confirmOpenId === item.id ? null : item.id,
+                          )
+                        }
+                      />
+                      <div
+                        className={`absolute left-full top-0 z-[10001] ml-2 w-56 rounded-2xl border bg-popover/95 p-2 shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 transition-all ${
+                          confirmOpenId === item.id
+                            ? "pointer-events-auto opacity-100"
+                            : "pointer-events-none opacity-0"
+                        }`}
+                      >
+                        <p className="text-xs leading-relaxed text-foreground">
+                          {item.confirm}
+                        </p>
+                        <div className="mt-2 flex items-center justify-end gap-2">
+                          <button
+                            className="rounded-lg border border-border px-2 py-1 text-xs transition-colors hover:bg-muted"
+                            onClick={() => setConfirmOpenId(null)}
+                          >
+                            Keep
+                          </button>
+                          <button
+                            className="rounded-lg border border-destructive/40 px-2 py-1 text-xs text-destructive transition-colors hover:bg-destructive/10"
+                            onClick={() => {
+                              item.onClick?.();
+                              setConfirmOpenId(null);
+                            }}
+                          >
+                            Confirm
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
-            <div
-              className={`absolute left-full top-0.5 z-[10000] ml-2 w-28 overflow-hidden rounded-2xl border bg-popover/92 p-1 text-popover-foreground shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 transition-all ${
-                elementMenuOpen === "name"
-                  ? "opacity-100 pointer-events-auto"
-                  : "opacity-0 pointer-events-none"
-              }`}
-            >
-              <div className="flex flex-col gap-1">
-                <MenuRow
-                  icon={Edit03Icon}
-                  label="Edit"
-                  onClick={onStartEditName}
-                />
-                <MenuRow icon={Copy01Icon} label="Copy" onClick={onCopyName} />
-              </div>
+                // ── Regular item (with optional disabled tooltip) ─────────
+                const row = (
+                  <MenuRow
+                    key={item.id}
+                    icon={item.icon}
+                    label={item.label}
+                    onClick={item.onClick ?? (() => {})}
+                    disabled={item.disabled}
+                    danger={item.danger}
+                  />
+                );
+
+                if (item.disabled && item.disabledReason) {
+                  return (
+                    <Tooltip key={item.id}>
+                      <TooltipTrigger asChild>
+                        <div>{row}</div>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs text-xs">
+                        {item.disabledReason}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
+                return row;
+              })}
             </div>
-          </div>
-
-          <div
-            className="relative"
-            onMouseEnter={onMouseEnterTime}
-            onMouseLeave={onMouseLeaveTime}
-          >
-            <button className="inline-flex w-full items-center gap-1 rounded-xl px-1.5 py-1 text-sm font-normal transition-colors hover:bg-primary/15">
-              <Icon icon={Clock01Icon} className="size-4" />
-              <span className="font-semibold">Time</span>
-              <Icon icon={ArrowRight01Icon} className="ml-auto size-4" />
-            </button>
-
-            <div
-              className={`absolute left-full top-0.5 z-[10000] ml-2 w-28 overflow-hidden rounded-2xl border bg-popover/92 p-1 text-popover-foreground shadow-lg backdrop-blur-sm ring-1 ring-foreground/12 transition-all ${
-                elementMenuOpen === "time"
-                  ? "opacity-100 pointer-events-auto"
-                  : "opacity-0 pointer-events-none"
-              }`}
-            >
-              <div className="flex flex-col gap-1">
-                <MenuRow
-                  icon={Edit03Icon}
-                  label="Edit"
-                  onClick={onStartEditTime}
-                />
-                <MenuRow icon={Copy01Icon} label="Copy" onClick={onCopyTime} />
-                <MenuRow
-                  icon={UndoIcon}
-                  label="Reset"
-                  onClick={
-                    isActive ? onResetActiveDuration : onResetTaskDuration
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="mx-1 my-0.5 border-t border-border/60" />
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <MenuRow
-                  icon={Delete02Icon}
-                  label="Delete"
-                  onClick={onDelete}
-                  className="text-destructive hover:bg-destructive/15 w-full"
-                  disabled={isActive}
-                />
-              </div>
-            </TooltipTrigger>
-            {isActive ? (
-              <TooltipContent side="left" className="max-w-48 text-xs">
-                Can't delete a currently active task
-              </TooltipContent>
-            ) : null}
-          </Tooltip>
+          ))}
         </div>
       </div>
     </TooltipProvider>,

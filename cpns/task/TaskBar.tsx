@@ -300,7 +300,7 @@ export default function TaskBar() {
                   size="icon-sm"
                   aria-label="Create task"
                   onClick={submitNewTask}
-                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
+                  className="size-7 rounded-full text-muted-foreground hover:text-foreground"
                 >
                   <Icon icon={PlusSignIcon} className="size-4" />
                 </InputGroupButton>
@@ -317,7 +317,7 @@ export default function TaskBar() {
                   }
                 }}
                 placeholder="Create a task..."
-                className="text-sm"
+                className="text-sm pl-1.5"
               />
             </InputGroup>
           </div>
