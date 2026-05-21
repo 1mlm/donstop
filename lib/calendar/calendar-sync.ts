@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { malikDebug } from "../malik-debug";
 import { useTODOStore } from "../store";
 import type { TaskHistoryEntry } from "../types";
 import {
@@ -44,7 +43,7 @@ export function useCalendarSync(
     const sync = async () => {
       setIsSyncing(true);
       setSyncError(null);
-      const { hasError } = await syncPendingEntries({
+      await syncPendingEntries({
         pending,
         accessToken: auth.accessToken,
         targetCalendarID,
@@ -55,14 +54,6 @@ export function useCalendarSync(
         markFailed,
         setSyncError,
       });
-
-      if (!hasError) {
-        for (const entry of pending) {
-          malikDebug("✅", "synced to calendar", { task: entry.taskLabel });
-        }
-      } else {
-        malikDebug("🟥", "calendar sync completed with failures");
-      }
 
       setIsSyncing(false);
     };

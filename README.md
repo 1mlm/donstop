@@ -62,7 +62,6 @@ No env vars needed to run locally. Optional:
 ```env
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 NEXT_PUBLIC_APP_URL=https://donstop.vercel.app
-NEXT_PUBLIC_MALIK_DEBUG=false
 ```
 
 ## Google Calendar setup

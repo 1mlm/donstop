@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createFakeHistoryData, createFakeTasks, createFakeTags } from "../fake";
-import { malikDebug } from "../malik-debug";
 import type { TagObj, TaskObj } from "../types";
 import { generateRandomID } from "../util";
 import {
@@ -202,7 +201,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const previousSession = get().activeSession;
 
           if (previousSession?.taskId === taskID) {
-            malikDebug("⬜", "store task already active", { taskID });
             return;
           }
 
@@ -231,8 +229,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 ]
               : get().activity,
           }));
-
-          malikDebug("⬜", "store task started", { taskID, label: task?.label });
         },
 
         stopActiveTask() {
@@ -241,13 +237,11 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
 
           if (!completed) {
             set({ activeSession: null });
-            malikDebug("⬜", "store task stop no active session");
             return;
           }
 
           if (!completed.completedSession) {
             set({ tasks: completed.nextTasks, activeSession: null });
-            malikDebug("⬜", "store task ignored under 5m");
             return;
           }
 
@@ -257,11 +251,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             history: [completed.completedSession, ...history],
             activity: [createTaskSessionActivity(completed.completedSession), ...activity],
           });
-
-          malikDebug("⬜", "store task saved", {
-            task: completed.completedSession.taskLabel,
-            durationSeconds: completed.completedSession.durationSeconds,
-          });
         },
 
         finishActiveTask() {
@@ -269,7 +258,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const finished = computeFinishActiveTaskState(currentTasks, activeSession);
 
           if (!finished) {
-            malikDebug("⬜", "store task finish no active session");
             return;
           }
 
@@ -277,11 +265,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             tasks: finished.nextTasks,
             activeSession: null,
             activity: [finished.activityItem, ...activity],
-          });
-
-          malikDebug("⬜", "store task finished", {
-            task: finished.taskLabel,
-            durationSeconds: finished.durationSeconds,
           });
         },
 
@@ -361,7 +344,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
         populateFakeData() {
           const { tasks: currentTasks, history: currentHistory, activity: currentActivity } = get();
           if (currentTasks.length > 0 || currentHistory.length > 0) {
-            malikDebug("⬜", "store fake data skipped store not empty");
             return false;
           }
 
@@ -370,7 +352,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const { history, activity } = createFakeHistoryData(generatedTasks, Date.now());
 
           if (history.length === 0) {
-            malikDebug("⬜", "store fake data skipped no candidates");
             return false;
           }
 
@@ -379,12 +360,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             tags: generatedTags,
             history,
             activity: [...activity, ...currentActivity],
-          });
-
-          malikDebug("⬜", "store fake data added", {
-            taskCount: generatedTasks.length,
-            historyCount: history.length,
-            activityCount: activity.length,
           });
 
           return true;
@@ -415,7 +390,6 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const transfer = computeTransferActiveSession(activeSession, currentTasks, targetTaskID);
 
           if (!transfer) {
-            malikDebug("⬜", "store task transfer tasks not found");
             return;
           }
 
@@ -440,12 +414,10 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
 
         resetAllData() {
           set({ ...createDefaultState(tasks), deletedTasks: [], needsDataReset: false, activeTagFilter: null });
-          malikDebug("⬜", "store reset all");
         },
 
         wipeAllData() {
           set({ ...createDefaultState([]), deletedTasks: [], needsDataReset: false, activeTagFilter: null });
-          malikDebug("⬜", "store wiped all data");
         },
 
         clearHistory() {
@@ -741,21 +713,16 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const validated = validatePersistedState(rawState, tasks);
 
           if (validated.hasLegacyNesting) {
-            malikDebug("🟥", "store legacy nested data detected, requesting reset");
             return { ...currentState, ...createDefaultState(tasks), deletedTasks: [], needsDataReset: true };
           }
 
           if (!validated.isValid) {
-            malikDebug("🟥", "store localstorage invalid, cleaned");
             if (typeof window !== "undefined") {
               window.localStorage.removeItem(TODO_STORE_STORAGE_KEY);
             }
-          } else {
-            malikDebug("⬜", "store localstorage valid");
           }
 
           if (validated.isValid && isLegacySeededFakeState(validated.state)) {
-            malikDebug("⬜", "store legacy fake seed cleaned");
             return { ...currentState, ...createDefaultState(tasks) };
           }
 

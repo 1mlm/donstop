@@ -3,7 +3,6 @@
 import { useGoogleLogin } from "@react-oauth/google";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { safeLocalStorage } from "@/lib/safe-local-storage";
-import { malikDebug } from "../malik-debug";
 import {
   createGoogleCalendar,
   fetchGoogleCalendars,
@@ -86,7 +85,6 @@ export function useGoogleCalendarAuth() {
     ) => {
       setStatus("loading");
       setLoadError(null);
-      malikDebug("⬜", "loading google calendars");
 
       try {
         const [calendars, profile] = await Promise.all([
@@ -109,7 +107,6 @@ export function useGoogleCalendarAuth() {
         setTargetCalendarID(selected?.id || null);
         setTargetCalendarName(selected?.summary || null);
         setStatus("linked");
-        malikDebug("✅", "google calendars loaded");
       } catch (error) {
         const msg =
           error instanceof Error ? error.message : "Unable to load calendars";
@@ -122,13 +119,11 @@ export function useGoogleCalendarAuth() {
             "Google session expired. Reconnect Google Calendar to continue.",
           );
           setStatus("idle");
-          malikDebug("⬜", "stale google token cleared");
           return;
         }
 
         setLoadError(msg);
         setStatus("idle");
-        malikDebug("🟥", "calendar load failed", error);
       }
     },
     [],
@@ -140,7 +135,6 @@ export function useGoogleCalendarAuth() {
     onSuccess: async (tokenResponse) => {
       setLoginFeedback(null);
       safeLocalStorage.setItem(TOKEN_KEY, tokenResponse.access_token);
-      malikDebug("✅", "google login ok");
       await loadCalendars(
         tokenResponse.access_token,
         targetCalendarID,
@@ -156,7 +150,6 @@ export function useGoogleCalendarAuth() {
           kind: "popup_closed",
           message: "Login screen manually closed",
         });
-        malikDebug("⬜", "google login popup closed manually");
         return;
       }
 
@@ -165,7 +158,6 @@ export function useGoogleCalendarAuth() {
         message: "Google login popup failed",
       });
       setLoadError("Google login popup failed");
-      malikDebug("🟥", "google login popup failed", error);
     },
     onError: () => {
       setLoadError("Google sign-in was cancelled");
@@ -174,7 +166,6 @@ export function useGoogleCalendarAuth() {
         kind: "popup_closed",
         message: "Login screen manually closed",
       });
-      malikDebug("🟥", "google login cancelled");
     },
   });
 
@@ -198,11 +189,9 @@ export function useGoogleCalendarAuth() {
     setTargetCalendarName(savedCalendarName);
 
     if (!savedToken) {
-      malikDebug("⬜", "google token missing");
       return;
     }
 
-    malikDebug("⬜", "restoring google token");
     void loadCalendars(savedToken, savedCalendarID, savedCalendarName);
   }, [loadCalendars]);
 
@@ -259,7 +248,6 @@ export function useGoogleCalendarAuth() {
     setLoadError(null);
     setLoginFeedback(null);
     clearStoredGoogleCalendarAuth();
-    malikDebug("⬜", "google disconnected");
   }, []);
 
   useEffect(() => {

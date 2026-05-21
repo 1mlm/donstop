@@ -1,4 +1,3 @@
-import { malikDebug } from "../malik-debug";
 import type { TaskHistoryEntry } from "../types";
 
 export const GOOGLE_CALENDAR_SCOPES = [
@@ -124,8 +123,6 @@ async function parseGoogleError(response: Response) {
 }
 
 export async function fetchGoogleCalendars(accessToken: string) {
-  malikDebug("⬜", "api google calendars request");
-
   const response = await fetch(
     "https://www.googleapis.com/calendar/v3/users/me/calendarList",
     {
@@ -136,7 +133,6 @@ export async function fetchGoogleCalendars(accessToken: string) {
   );
 
   if (!response.ok) {
-    malikDebug("🟥", "api google calendars error", { status: response.status });
     throw new Error(await parseGoogleError(response));
   }
 
@@ -148,12 +144,6 @@ export async function fetchGoogleCalendars(accessToken: string) {
     return left.summary.localeCompare(right.summary);
   });
 
-  if (calendars.length === 0) {
-    malikDebug("⬜", "api google calendars empty");
-  } else {
-    malikDebug("✅", "api google calendars found", { count: calendars.length });
-  }
-
   return calendars;
 }
 
@@ -162,11 +152,6 @@ export async function createGoogleCalendarEvent(
   calendarId: string,
   session: TaskHistoryEntry,
 ) {
-  malikDebug("⬜", "api google event create", {
-    task: session.taskLabel,
-    calendarId,
-  });
-
   const encodedCalendarID = encodeURIComponent(calendarId);
   const postedAt = new Date().toISOString();
   const websiteURL = resolveWebsiteURL();
@@ -198,12 +183,10 @@ export async function createGoogleCalendarEvent(
   );
 
   if (!response.ok) {
-    malikDebug("🟥", "api google event error", { status: response.status });
     throw new Error(await parseGoogleError(response));
   }
 
   const event = (await response.json()) as GoogleCalendarEventResponse;
-  malikDebug("✅", "api google event created", { eventId: event.id });
 
   return event;
 }
@@ -253,7 +236,6 @@ export async function createGoogleCalendar(
   summary: string,
 ) {
   const cleanName = summary.trim() || "DonStop";
-  malikDebug("⬜", "api calendar create", { summary: cleanName });
 
   const response = await fetch(
     "https://www.googleapis.com/calendar/v3/calendars",
@@ -271,12 +253,10 @@ export async function createGoogleCalendar(
   );
 
   if (!response.ok) {
-    malikDebug("🟥", "api calendar create error", { status: response.status });
     throw new Error(await parseGoogleError(response));
   }
 
   const created = (await response.json()) as GoogleCalendarCreateResponse;
-  malikDebug("✅", "api calendar created", { id: created.id });
 
   return created;
 }
@@ -289,11 +269,6 @@ export async function deleteGoogleCalendarEvent(
   const encodedCalendarID = encodeURIComponent(calendarId);
   const encodedEventID = encodeURIComponent(eventId);
 
-  malikDebug("⬜", "api calendar event delete", {
-    calendarId,
-    eventId,
-  });
-
   const response = await fetch(
     `https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarID}/events/${encodedEventID}`,
     {
@@ -305,11 +280,6 @@ export async function deleteGoogleCalendarEvent(
   );
 
   if (!response.ok) {
-    malikDebug("🟥", "api calendar event delete error", {
-      status: response.status,
-    });
     throw new Error(await parseGoogleError(response));
   }
-
-  malikDebug("✅", "api calendar event deleted", { eventId });
 }
