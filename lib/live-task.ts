@@ -56,6 +56,28 @@ export function useTaskRunningSeconds(taskID: TaskID) {
   return useRunningSeconds(activeSession?.startedAt);
 }
 
+export function useTaskRunningSecondsThrottled(taskID: TaskID) {
+  const activeSession = useTODOStore((state) =>
+    state.activeSession?.taskId === taskID ? state.activeSession : null,
+  );
+  const startedAt = activeSession?.startedAt;
+  const [runningSeconds, setRunningSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!startedAt) {
+      setRunningSeconds(0);
+      return;
+    }
+    const update = () =>
+      setRunningSeconds(getElapsedSeconds(startedAt, Date.now()));
+    update();
+    const id = window.setInterval(update, 60_000);
+    return () => window.clearInterval(id);
+  }, [startedAt]);
+
+  return runningSeconds;
+}
+
 export function useActiveTaskSummary() {
   const activeSession = useTODOStore((state) => state.activeSession);
   const tasks = useTODOStore((state) => state.tasks);

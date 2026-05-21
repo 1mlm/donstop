@@ -24,7 +24,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
-import { useTaskRunningSeconds } from "@/lib/live-task";
+import { useTaskRunningSecondsThrottled } from "@/lib/live-task";
 import { MOTION_PROPS } from "@/lib/motion";
 import { type TaskID, useTODOStore } from "@/lib/store";
 import { formatPreviewTime } from "@/lib/util";
@@ -184,7 +184,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
     (state) => state.activeSession?.taskId === taskID,
   );
   const activeTaskID = useTODOStore((state) => state.activeSession?.taskId);
-  const runningSeconds = useTaskRunningSeconds(taskID);
+  const runningSeconds = useTaskRunningSecondsThrottled(taskID);
   const isParent = childrenIDs.length > 0;
   const isFinished = task?.isFinished ?? false;
   const isFavorite = task?.isFavorite ?? false;

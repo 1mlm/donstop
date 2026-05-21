@@ -448,8 +448,14 @@ export default function HistoryMenu() {
                 allItems={allDisplayActivity}
                 filterTask={filterTask}
                 filterKinds={filterKinds}
-                onFilterTaskChange={setFilterTask}
-                onFilterKindsChange={setFilterKinds}
+                onFilterTaskChange={(t) => {
+                  setFilterTask(t);
+                  setSelectedIds(new Set());
+                }}
+                onFilterKindsChange={(k) => {
+                  setFilterKinds(k);
+                  setSelectedIds(new Set());
+                }}
               />
               {configMode && selectionMode ? (
                 <Button
