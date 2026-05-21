@@ -2,6 +2,7 @@
 
 import {
   Bug01Icon,
+  Cancel01Icon,
   CleanIcon,
   Copy01Icon,
   DatabaseIcon,
@@ -75,9 +76,19 @@ export default function DevToolbar() {
             transition={{ duration: 0.15 }}
             className="mr-1 mb-1 w-56 rounded-xl border border-border/60 bg-card/95 p-3 shadow-xl backdrop-blur-sm"
           >
-            <p className="mb-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Dev Tools
-            </p>
+            <div className="mb-2.5 flex items-center justify-between">
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Dev Tools
+              </p>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Close dev tools"
+              >
+                <Icon icon={Cancel01Icon} className="size-3.5" />
+              </button>
+            </div>
 
             <div className="mb-3 space-y-1 rounded-lg bg-muted/40 px-2.5 py-2">
               <DevStat label="Tasks" value={tasks.length} />
