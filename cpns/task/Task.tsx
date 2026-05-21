@@ -24,9 +24,9 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useShallow } from "zustand/shallow";
-import { useTaskRunningSecondsThrottled } from "@/lib/live-task";
 import { MOTION_PROPS } from "@/lib/motion";
 import { type TaskID, useTODOStore } from "@/lib/store";
+import { useTaskRunningSecondsThrottled } from "@/lib/task.hooks";
 import { formatPreviewTime } from "@/lib/util";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import {
@@ -50,7 +50,7 @@ import {
   useTaskCollapseWhileDraggingEffect,
   useTaskEditableFocusEffect,
   useTaskEditValueSyncEffect,
-} from "./task.effects";
+} from "./task.hooks";
 import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
 
 function formatDurationInputValue(totalSeconds: number) {

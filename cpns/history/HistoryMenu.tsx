@@ -27,7 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import { TooltipProvider } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
 import { HistoryActivityLine } from "./HistoryActivityLine";
-import { useHistoryNowMsEffect } from "./history.effects";
+import { useHistoryNowMsEffect } from "./history.hooks";
 import {
   buildDisplayActivity,
   buildSyncedAtByEntryID,

@@ -36,7 +36,7 @@ import { SettingRow } from "./SettingRow";
 import {
   useCursorEnabledEffect,
   useSettingsBootEffect,
-} from "./settings.effects";
+} from "./settings.hooks";
 import {
   type AppTheme,
   applyTheme,
