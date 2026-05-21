@@ -32,7 +32,10 @@ export function ActiveTaskIndicator() {
 
   useEffect(() => {
     const isActive = activeTaskLabel !== null;
-    document.title = isActive ? `⏱ ${activeTaskLabel} · DonStop` : "DonStop";
+    const isPWA = window.matchMedia("(display-mode: standalone)").matches;
+    document.title = isActive
+      ? `⏱ ${activeTaskLabel}${isPWA ? "" : " · DonStop"}`
+      : "DonStop";
     setFavicon(isActive);
     if ("setAppBadge" in navigator) {
       if (isActive) {
