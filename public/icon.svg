@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="120" fill="#09090b"/>
-  <rect x="80" y="80" width="352" height="352" rx="80" fill="#22c55e"/>
-  <text x="256" y="340" font-size="240" text-anchor="middle" fill="white" font-family="system-ui, sans-serif">⏱</text>
-</svg>
