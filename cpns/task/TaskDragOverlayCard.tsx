@@ -1,16 +1,14 @@
-import { ChevronDown, MoreIcon, Play } from "@hugeicons/core-free-icons";
+import { MoreIcon, Play } from "@hugeicons/core-free-icons";
 import { formatPreviewTime } from "@/lib/util";
 import { Icon } from "../Icon";
 
 export function TaskDragOverlayCard({
   label,
   storedSeconds,
-  childrenCount,
   isInvalidDrop = false,
 }: {
   label: string;
   storedSeconds: number;
-  childrenCount: number;
   isInvalidDrop?: boolean;
 }) {
   return (
@@ -43,12 +41,6 @@ export function TaskDragOverlayCard({
             {formatPreviewTime(storedSeconds)}
           </span>
         </span>
-
-        {childrenCount > 0 ? (
-          <span className="shrink-0 rounded squircle squircle-lg p-1 opacity-90">
-            <Icon icon={ChevronDown} className="size-4 scale-125" />
-          </span>
-        ) : null}
       </div>
     </div>
   );

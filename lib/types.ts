@@ -1,9 +1,15 @@
+export type TagObj = {
+  id: string;
+  name: string;
+  icon: string;
+};
+
 export type TaskObj = {
   id: string;
   label: string;
-  parentId?: string;
   position: number;
   time: number;
+  tagIds?: string[];
   isFinished?: boolean;
   finishedAt?: string;
   isFavorite?: boolean;

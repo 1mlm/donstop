@@ -1,40 +1,19 @@
-import type { TaskObj } from "@/lib/types";
 import { formatPreviewTime } from "@/lib/util";
 
 export const TASK_DROP_TARGET_PREFIX = {
   before: "drop-before:",
   after: "drop-after:",
-  inside: "drop-inside:",
 } as const;
 
 const TASK_DROP_TARGETS = [
-  {
-    prefix: TASK_DROP_TARGET_PREFIX.before,
-    placement: "before" as const,
-  },
-  {
-    prefix: TASK_DROP_TARGET_PREFIX.after,
-    placement: "after" as const,
-  },
-  {
-    prefix: TASK_DROP_TARGET_PREFIX.inside,
-    placement: "inside" as const,
-  },
+  { prefix: TASK_DROP_TARGET_PREFIX.before, placement: "before" as const },
+  { prefix: TASK_DROP_TARGET_PREFIX.after, placement: "after" as const },
 ];
 
 type DropPlacement = (typeof TASK_DROP_TARGETS)[number]["placement"];
 
-type Point2D = {
-  x: number;
-  y: number;
-};
-
-type RectBounds = {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-};
+type Point2D = { x: number; y: number };
+type RectBounds = { left: number; right: number; top: number; bottom: number };
 
 export function getTaskDropTargetID(taskID: string, placement: DropPlacement) {
   return `${TASK_DROP_TARGET_PREFIX[placement]}${taskID}`;
@@ -75,78 +54,6 @@ export function isPointerInBottomSnapZone({
   );
 }
 
-export function isDescendantDropTarget({
-  allTasks,
-  draggingTaskID,
-  taskID,
-}: {
-  allTasks: TaskObj[];
-  draggingTaskID: string | null;
-  taskID: string;
-}) {
-  if (!draggingTaskID || draggingTaskID === taskID) {
-    return false;
-  }
-
-  const descendantsOfDragging = new Set<string>();
-  const stack = [draggingTaskID];
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) {
-      continue;
-    }
-
-    const directChildren = allTasks
-      .filter((item) => item.parentId === current)
-      .map((item) => item.id);
-
-    for (const childID of directChildren) {
-      if (!descendantsOfDragging.has(childID)) {
-        descendantsOfDragging.add(childID);
-        stack.push(childID);
-      }
-    }
-  }
-
-  return descendantsOfDragging.has(taskID);
-}
-
-export function getDescendantsOfTask(
-  allTasks: TaskObj[],
-  rootTaskID: string | null,
-) {
-  const descendants = new Set<string>();
-
-  if (!rootTaskID) {
-    return descendants;
-  }
-
-  const stack = [rootTaskID];
-
-  while (stack.length > 0) {
-    const current = stack.pop();
-    if (!current) {
-      continue;
-    }
-
-    for (const item of allTasks) {
-      if (item.parentId !== current) {
-        continue;
-      }
-
-      if (descendants.has(item.id)) {
-        continue;
-      }
-
-      descendants.add(item.id);
-      stack.push(item.id);
-    }
-  }
-
-  return descendants;
-}
-
 export function getTaskDurationLabel({
   isActive,
   storedSeconds,
@@ -156,10 +63,7 @@ export function getTaskDurationLabel({
   storedSeconds: number;
   runningSeconds: number;
 }) {
-  if (!isActive) {
-    return formatPreviewTime(storedSeconds);
-  }
-
+  if (!isActive) return formatPreviewTime(storedSeconds);
   return formatPreviewTime(storedSeconds + runningSeconds) ?? "0s";
 }
 
@@ -167,11 +71,7 @@ export function parseTaskDropTarget(overID: string) {
   const matchedDropTarget = TASK_DROP_TARGETS.find(({ prefix }) =>
     overID.startsWith(prefix),
   );
-
-  if (!matchedDropTarget) {
-    return null;
-  }
-
+  if (!matchedDropTarget) return null;
   return {
     placement: matchedDropTarget.placement,
     targetTaskID: overID.replace(matchedDropTarget.prefix, ""),

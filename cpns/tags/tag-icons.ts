@@ -1,0 +1,48 @@
+import {
+  Activity01Icon,
+  AiBrain01Icon,
+  BodyPartMuscleIcon,
+  Book01Icon,
+  BriefcaseIcon,
+  Camera01Icon,
+  CodeIcon,
+  CoffeeIcon,
+  Dollar01Icon,
+  DollarCircleIcon,
+  Dumbbell01Icon,
+  Flag01Icon,
+  HeartCheckIcon,
+  Home01Icon,
+  LaptopIcon,
+  Leaf01Icon,
+  Mortarboard01Icon,
+  MusicNote01Icon,
+  NoteIcon,
+  StarIcon,
+} from "@hugeicons/core-free-icons";
+import type { HugeIcon } from "../Icon";
+
+export const TAG_ICONS: Record<string, HugeIcon> = {
+  Activity01Icon,
+  AiBrain01Icon,
+  Book01Icon,
+  BodyPartMuscleIcon,
+  BriefcaseIcon,
+  Camera01Icon,
+  CodeIcon,
+  CoffeeIcon,
+  Dollar01Icon,
+  DollarCircleIcon,
+  Dumbbell01Icon,
+  Flag01Icon,
+  HeartCheckIcon,
+  Home01Icon,
+  LaptopIcon,
+  Leaf01Icon,
+  Mortarboard01Icon,
+  MusicNote01Icon,
+  NoteIcon,
+  StarIcon,
+};
+
+export type TagIconKey = keyof typeof TAG_ICONS;

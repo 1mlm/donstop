@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { createFakeHistoryData, createFakeTasks } from "../fake";
+import { createFakeHistoryData, createFakeTasks, createFakeTags } from "../fake";
 import { malikDebug } from "../malik-debug";
-import type { TaskObj } from "../types";
+import type { TagObj, TaskObj } from "../types";
 import { generateRandomID } from "../util";
 import {
   computeCancelActiveTaskState,
@@ -14,6 +14,7 @@ import {
   createDefaultState,
   createTaskSessionActivity,
   sortByPosition,
+  type TagID,
   type TaskID,
   TODO_STORE_STORAGE_KEY,
   validatePersistedState,
@@ -31,7 +32,9 @@ import {
 } from "./store-session.utils";
 
 export type TODOStoreState = ReturnType<typeof createDefaultState> & {
-  createTask: (label: string, parentId?: TaskID) => TaskID | null;
+  needsDataReset: boolean;
+  activeTagFilter: TagID | null;
+  createTask: (label: string) => TaskID | null;
   startTask: (taskID: TaskID) => void;
   stopActiveTask: () => void;
   finishActiveTask: () => void;
@@ -45,11 +48,7 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   transferActiveTaskTime: (targetTaskID: TaskID) => void;
   toggleFavorite: (taskID: TaskID) => void;
   renameTask: (taskID: TaskID, newLabel: string) => boolean;
-  moveTask: (
-    taskID: TaskID,
-    targetTaskID: TaskID,
-    placement: TaskMovePlacement,
-  ) => boolean;
+  moveTask: (taskID: TaskID, targetTaskID: TaskID, placement: TaskMovePlacement) => boolean;
   deleteTask: (taskID: TaskID) => boolean;
   restoreDeletedTask: (taskID: TaskID) => boolean;
   deletedTasks: TaskObj[];
@@ -62,80 +61,36 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   addActivityNote: (activityId: string, text: string) => void;
   deleteActivityNote: (activityId: string, noteId: string) => void;
   deleteActivityItems: (ids: string[]) => void;
-  markHistoryEntrySynced: (
-    historyEntryID: string,
-    calendarEventId: string,
-    syncedCalendarId: string,
-    syncedCalendarName: string,
-  ) => void;
+  markHistoryEntrySynced: (historyEntryID: string, calendarEventId: string, syncedCalendarId: string, syncedCalendarName: string) => void;
   markHistoryEntryFailed: (historyEntryID: string) => void;
   markHistoryEntriesDeleted: (historyEntryIDs: string[]) => void;
   logCalendarConnected: (subjectLabel?: string) => void;
   logCalendarDisconnected: (subjectLabel?: string) => void;
   logCalendarSyncEnabled: (subjectLabel?: string) => void;
   logCalendarSyncDisabled: (subjectLabel?: string) => void;
-  logCalendarTargetChanged: (
-    previousCalendarName: string,
-    nextCalendarName: string,
-  ) => void;
+  logCalendarTargetChanged: (previousCalendarName: string, nextCalendarName: string) => void;
   logSettingsCursorEnabled: () => void;
   logSettingsCursorDisabled: () => void;
-  logSettingsPrimaryColorChanged: (
-    previousColor: string,
-    nextColor: string,
-  ) => void;
+  logSettingsPrimaryColorChanged: (previousColor: string, nextColor: string) => void;
   getRootTaskIDs: () => TaskID[];
   getTaskFromID: (taskID: TaskID) => TaskObj | null;
-  getTaskChildrenIDs: (taskID: TaskID) => TaskID[];
-  hasActiveChildRecursive: (taskID: TaskID) => boolean;
-  taskExpanded: Record<string, boolean>;
-  setTaskExpanded: (taskID: string, expanded: boolean) => void;
+  getTagFromID: (tagId: TagID) => TagObj | null;
+  createTag: (name: string, icon: string) => TagID;
+  deleteTag: (tagId: TagID) => void;
+  renameTag: (tagId: TagID, name: string) => void;
+  assignTagToTask: (taskID: TaskID, tagId: TagID) => void;
+  removeTagFromTask: (taskID: TaskID, tagId: TagID) => void;
+  setActiveTagFilter: (tagId: TagID | null) => void;
+  dismissDataReset: () => void;
 };
 
 function isLegacySeededFakeState(state: ReturnType<typeof createDefaultState>) {
-  if (state.activeSession !== null) {
-    return false;
-  }
-
-  if (state.history.length > 0 || state.activity.length > 0) {
-    return false;
-  }
-
+  if (state.activeSession !== null) return false;
+  if (state.history.length > 0 || state.activity.length > 0) return false;
   const generatedFakeTasks = createFakeTasks();
-
-  if (state.tasks.length !== generatedFakeTasks.length) {
-    return false;
-  }
-
+  if (state.tasks.length !== generatedFakeTasks.length) return false;
   const fakeTaskIDs = new Set(generatedFakeTasks.map((task) => task.id));
-
   return state.tasks.every((task) => fakeTaskIDs.has(task.id));
-}
-
-function collectDescendantsByParent(
-  tasks: TaskObj[],
-  rootID: string,
-): string[] {
-  const descendants: string[] = [];
-  const stack = [rootID];
-
-  while (stack.length > 0) {
-    const currentID = stack.pop();
-    if (!currentID) {
-      continue;
-    }
-
-    for (const task of tasks) {
-      if (task.parentId !== currentID) {
-        continue;
-      }
-
-      descendants.push(task.id);
-      stack.push(task.id);
-    }
-  }
-
-  return descendants;
 }
 
 export const createTODOStoreBase = (tasks: TaskObj[]) =>
@@ -144,28 +99,88 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
       (set, get) => ({
         ...createDefaultState(tasks),
         deletedTasks: [],
-        createTask(label, parentId) {
+        needsDataReset: false,
+        activeTagFilter: null,
+
+        setActiveTagFilter(tagId) {
+          set({ activeTagFilter: tagId });
+        },
+
+        dismissDataReset() {
+          get().resetAllData();
+          set({ needsDataReset: false });
+        },
+
+        createTag(name, icon) {
+          const tagId = generateRandomID();
+          set((state) => ({
+            tags: [...state.tags, { id: tagId, name: name.trim(), icon }],
+          }));
+          return tagId;
+        },
+
+        deleteTag(tagId) {
+          set((state) => ({
+            tags: state.tags.filter((t) => t.id !== tagId),
+            tasks: state.tasks.map((t) =>
+              t.tagIds?.includes(tagId)
+                ? { ...t, tagIds: t.tagIds.filter((id) => id !== tagId) }
+                : t,
+            ),
+          }));
+        },
+
+        renameTag(tagId, name) {
+          const trimmed = name.trim();
+          if (!trimmed) return;
+          set((state) => ({
+            tags: state.tags.map((t) =>
+              t.id === tagId ? { ...t, name: trimmed } : t,
+            ),
+          }));
+        },
+
+        assignTagToTask(taskID, tagId) {
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === taskID && !t.tagIds?.includes(tagId)
+                ? { ...t, tagIds: [...(t.tagIds ?? []), tagId] }
+                : t,
+            ),
+          }));
+        },
+
+        removeTagFromTask(taskID, tagId) {
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === taskID
+                ? { ...t, tagIds: (t.tagIds ?? []).filter((id) => id !== tagId) }
+                : t,
+            ),
+          }));
+        },
+
+        getTagFromID(tagId) {
+          return get().tags.find((t) => t.id === tagId) ?? null;
+        },
+
+        createTask(label) {
           const trimmed = label.trim();
-          if (!trimmed) {
-            return null;
-          }
+          if (!trimmed) return null;
 
           const taskID = generateRandomID();
           const createdAt = new Date().toISOString();
+          const activeTagFilter = get().activeTagFilter;
 
           set((state) => ({
             tasks: [
-              ...state.tasks.map((task) =>
-                task.parentId === parentId
-                  ? { ...task, position: task.position + 1 }
-                  : task,
-              ),
+              ...state.tasks.map((task) => ({ ...task, position: task.position + 1 })),
               {
                 id: taskID,
                 label: trimmed,
-                parentId,
                 position: 0,
                 time: 0,
+                tagIds: activeTagFilter ? [activeTagFilter] : [],
               },
             ],
             activity: [
@@ -182,18 +197,12 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
 
           return taskID;
         },
-        taskExpanded: {},
-        setTaskExpanded(taskID, expanded) {
-          set((state) => ({
-            ...state,
-            taskExpanded: { ...state.taskExpanded, [taskID]: expanded },
-          }));
-        },
+
         startTask(taskID) {
           const previousSession = get().activeSession;
 
           if (previousSession?.taskId === taskID) {
-            malikDebug("\u2B1C", "store task already active", { taskID });
+            malikDebug("⬜", "store task already active", { taskID });
             return;
           }
 
@@ -204,23 +213,11 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const task = get().getTaskFromID(taskID);
           const startedAt = new Date().toISOString();
 
-          const allTasks = get().tasks;
-          const toStamp = new Set<string>([taskID]);
-          let currentParentId = task?.parentId;
-          while (currentParentId) {
-            toStamp.add(currentParentId);
-            const parent = allTasks.find((t) => t.id === currentParentId);
-            currentParentId = parent?.parentId;
-          }
-
-          set({
-            tasks: allTasks.map((t) =>
-              toStamp.has(t.id) ? { ...t, lastActivatedAt: startedAt } : t,
+          set((state) => ({
+            tasks: state.tasks.map((t) =>
+              t.id === taskID ? { ...t, lastActivatedAt: startedAt } : t,
             ),
-            activeSession: {
-              taskId: taskID,
-              startedAt,
-            },
+            activeSession: { taskId: taskID, startedAt },
             activity: task
               ? [
                   {
@@ -233,35 +230,24 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                   ...get().activity,
                 ]
               : get().activity,
-          });
+          }));
 
-          malikDebug("\u2B1C", "store task started", {
-            taskID,
-            label: task?.label,
-          });
+          malikDebug("⬜", "store task started", { taskID, label: task?.label });
         },
+
         stopActiveTask() {
-          const {
-            tasks: currentTasks,
-            activeSession,
-            history,
-            activity,
-          } = get();
+          const { tasks: currentTasks, activeSession, history, activity } = get();
           const completed = completeActiveSession(currentTasks, activeSession);
 
           if (!completed) {
             set({ activeSession: null });
-            malikDebug("\u2B1C", "store task stop no active session");
+            malikDebug("⬜", "store task stop no active session");
             return;
           }
 
           if (!completed.completedSession) {
-            set({
-              tasks: completed.nextTasks,
-              activeSession: null,
-            });
-
-            malikDebug("\u2B1C", "store task ignored under 5m");
+            set({ tasks: completed.nextTasks, activeSession: null });
+            malikDebug("⬜", "store task ignored under 5m");
             return;
           }
 
@@ -269,27 +255,21 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             tasks: completed.nextTasks,
             activeSession: null,
             history: [completed.completedSession, ...history],
-            activity: [
-              createTaskSessionActivity(completed.completedSession),
-              ...activity,
-            ],
+            activity: [createTaskSessionActivity(completed.completedSession), ...activity],
           });
 
-          malikDebug("\u2B1C", "store task saved", {
+          malikDebug("⬜", "store task saved", {
             task: completed.completedSession.taskLabel,
             durationSeconds: completed.completedSession.durationSeconds,
           });
         },
+
         finishActiveTask() {
           const { activeSession, tasks: currentTasks, activity } = get();
-
-          const finished = computeFinishActiveTaskState(
-            currentTasks,
-            activeSession,
-          );
+          const finished = computeFinishActiveTaskState(currentTasks, activeSession);
 
           if (!finished) {
-            malikDebug("\u2B1C", "store task finish no active session");
+            malikDebug("⬜", "store task finish no active session");
             return;
           }
 
@@ -299,27 +279,18 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             activity: [finished.activityItem, ...activity],
           });
 
-          malikDebug("\u2B1C", "store task finished", {
+          malikDebug("⬜", "store task finished", {
             task: finished.taskLabel,
             durationSeconds: finished.durationSeconds,
           });
         },
+
         resetActiveTaskDuration() {
           const { activeSession } = get();
-
-          if (!activeSession) {
-            malikDebug("\u2B1C", "store task reset duration no active session");
-            return;
-          }
-
-          set({
-            activeSession: resetActiveSessionStart(activeSession),
-          });
-
-          malikDebug("\u2B1C", "store task duration reset", {
-            taskID: activeSession.taskId,
-          });
+          if (!activeSession) return;
+          set({ activeSession: resetActiveSessionStart(activeSession) });
         },
+
         finishTask(taskID) {
           const { tasks: currentTasks, activity } = get();
           const task = currentTasks.find((t) => t.id === taskID);
@@ -345,6 +316,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             ],
           });
         },
+
         restoreTask(taskID) {
           const { tasks: currentTasks, activity } = get();
           const task = currentTasks.find((t) => t.id === taskID);
@@ -353,9 +325,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const restoredAt = new Date().toISOString();
           set({
             tasks: currentTasks.map((t) =>
-              t.id === taskID
-                ? { ...t, isFinished: false, finishedAt: undefined }
-                : t,
+              t.id === taskID ? { ...t, isFinished: false, finishedAt: undefined } : t,
             ),
             activity: [
               {
@@ -369,54 +339,35 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             ],
           });
         },
+
         resetTaskDuration(taskID) {
           const { tasks: currentTasks } = get();
-          set({
-            tasks: resetTaskDurationInList(currentTasks, taskID),
-          });
+          set({ tasks: resetTaskDurationInList(currentTasks, taskID) });
         },
-        setTaskDuration(taskID, durationSeconds) {
-          if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
-            return false;
-          }
 
+        setTaskDuration(taskID, durationSeconds) {
+          if (!Number.isFinite(durationSeconds) || durationSeconds < 0) return false;
           const rounded = Math.floor(durationSeconds);
           const task = get().getTaskFromID(taskID);
-
-          if (!task) {
-            return false;
-          }
-
-          if (task.time === rounded) {
-            return false;
-          }
-
+          if (!task || task.time === rounded) return false;
           set((state) => ({
             tasks: state.tasks.map((item) =>
               item.id === taskID ? { ...item, time: rounded } : item,
             ),
           }));
-
           return true;
         },
-        populateFakeData() {
-          const {
-            tasks: currentTasks,
-            history: currentHistory,
-            activity: currentActivity,
-          } = get();
 
+        populateFakeData() {
+          const { tasks: currentTasks, history: currentHistory, activity: currentActivity } = get();
           if (currentTasks.length > 0 || currentHistory.length > 0) {
             malikDebug("⬜", "store fake data skipped store not empty");
             return false;
           }
 
           const generatedTasks = createFakeTasks();
-
-          const { history, activity } = createFakeHistoryData(
-            generatedTasks,
-            Date.now(),
-          );
+          const generatedTags = createFakeTags();
+          const { history, activity } = createFakeHistoryData(generatedTasks, Date.now());
 
           if (history.length === 0) {
             malikDebug("⬜", "store fake data skipped no candidates");
@@ -425,6 +376,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
 
           set({
             tasks: generatedTasks,
+            tags: generatedTags,
             history,
             activity: [...activity, ...currentActivity],
           });
@@ -437,25 +389,15 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
 
           return true;
         },
+
         cancelActiveTask(skipConfirmation = false) {
           const { activeSession, tasks: currentTasks, activity } = get();
+          if (!activeSession) return false;
 
-          if (!activeSession) {
-            malikDebug("\u2B1C", "store task cancel no active session");
-            return false;
-          }
-
-          const cancelled = computeCancelActiveTaskState(
-            currentTasks,
-            activeSession,
-          );
-
-          if (!cancelled) {
-            return false;
-          }
+          const cancelled = computeCancelActiveTaskState(currentTasks, activeSession);
+          if (!cancelled) return false;
 
           if (!skipConfirmation && cancelled.durationSeconds > 300) {
-            // 5 minutes = 300 seconds
             if (typeof window !== "undefined") {
               const confirmed = window.confirm(
                 `Cancel "${cancelled.taskLabel}" after ${Math.floor(cancelled.durationSeconds / 60)}+ minutes? This will discard the time spent.`,
@@ -464,33 +406,20 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             }
           }
 
-          set({
-            activeSession: null,
-            activity: [cancelled.activityItem, ...activity],
-          });
-
-          malikDebug("\u2B1C", "store task cancelled", {
-            task: cancelled.taskLabel,
-            durationSeconds: cancelled.durationSeconds,
-          });
-
+          set({ activeSession: null, activity: [cancelled.activityItem, ...activity] });
           return true;
         },
+
         transferActiveTaskTime(targetTaskID) {
           const { activeSession, tasks: currentTasks, activity } = get();
-
-          const transfer = computeTransferActiveSession(
-            activeSession,
-            currentTasks,
-            targetTaskID,
-          );
+          const transfer = computeTransferActiveSession(activeSession, currentTasks, targetTaskID);
 
           if (!transfer) {
-            malikDebug("\u2B1C", "store task transfer tasks not found");
+            malikDebug("⬜", "store task transfer tasks not found");
             return;
           }
-          const transferredAt = new Date().toISOString();
 
+          const transferredAt = new Date().toISOString();
           set({
             tasks: currentTasks,
             activeSession: transfer.nextActiveSession,
@@ -507,29 +436,22 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
               ...activity,
             ],
           });
+        },
 
-          malikDebug("\u2B1C", "store task time transferred", {
-            from: transfer.sourceTaskLabel,
-            to: transfer.targetTaskLabel,
-            durationSeconds: transfer.durationSeconds,
-          });
-        },
         resetAllData() {
-          set(createDefaultState(tasks));
-          malikDebug("\u2B1C", "store reset all");
+          set({ ...createDefaultState(tasks), deletedTasks: [], needsDataReset: false, activeTagFilter: null });
+          malikDebug("⬜", "store reset all");
         },
+
         wipeAllData() {
-          set(createDefaultState([]));
-          malikDebug("\u2B1C", "store wiped all data");
+          set({ ...createDefaultState([]), deletedTasks: [], needsDataReset: false, activeTagFilter: null });
+          malikDebug("⬜", "store wiped all data");
         },
+
         clearHistory() {
-          set((state) => ({
-            ...state,
-            history: [],
-            activity: [],
-          }));
-          malikDebug("\u2B1C", "store history cleared");
+          set((state) => ({ ...state, history: [], activity: [] }));
         },
+
         clearHistoryRange(startISO, endISO) {
           set((state) => {
             const start = startISO ? new Date(startISO).getTime() : 0;
@@ -552,6 +474,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             return { ...state, activity: keepActivity, history: keepHistory };
           });
         },
+
         addActivityNote(activityId, text) {
           set((state) => ({
             ...state,
@@ -561,513 +484,241 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                     ...item,
                     notes: [
                       ...(item.notes ?? []),
-                      {
-                        id: generateRandomID(),
-                        text: text.trim(),
-                        createdAt: new Date().toISOString(),
-                      },
+                      { id: generateRandomID(), text: text.trim(), createdAt: new Date().toISOString() },
                     ],
                   }
                 : item,
             ),
           }));
         },
+
         deleteActivityNote(activityId, noteId) {
           set((state) => ({
             ...state,
             activity: state.activity.map((item) =>
               item.id === activityId
-                ? {
-                    ...item,
-                    notes: (item.notes ?? []).filter((n) => n.id !== noteId),
-                  }
+                ? { ...item, notes: (item.notes ?? []).filter((n) => n.id !== noteId) }
                 : item,
             ),
           }));
         },
+
         deleteActivityItems(ids) {
           const idSet = new Set(ids);
           set((state) => {
             const removed = state.activity.filter((item) => idSet.has(item.id));
             const removedEntryIDs = new Set(
-              removed
-                .map((item) => item.taskHistoryEntryID)
-                .filter((id): id is string => Boolean(id)),
+              removed.map((item) => item.taskHistoryEntryID).filter((id): id is string => Boolean(id)),
             );
-            const remainingActivity = state.activity.filter(
-              (item) => !idSet.has(item.id),
-            );
-            const referencedByRemaining = new Set(
-              remainingActivity.map((item) => item.taskHistoryEntryID),
-            );
+            const remainingActivity = state.activity.filter((item) => !idSet.has(item.id));
+            const referencedByRemaining = new Set(remainingActivity.map((item) => item.taskHistoryEntryID));
             const keepHistory = state.history.filter(
-              (entry) =>
-                !removedEntryIDs.has(entry.id) ||
-                referencedByRemaining.has(entry.id),
+              (entry) => !removedEntryIDs.has(entry.id) || referencedByRemaining.has(entry.id),
             );
-            return {
-              ...state,
-              activity: remainingActivity,
-              history: keepHistory,
-            };
+            return { ...state, activity: remainingActivity, history: keepHistory };
           });
         },
-        markHistoryEntrySynced(
-          historyEntryID,
-          calendarEventId,
-          syncedCalendarId,
-          syncedCalendarName,
-        ) {
+
+        markHistoryEntrySynced(historyEntryID, calendarEventId, syncedCalendarId, syncedCalendarName) {
           set((state) => ({
             history: state.history.map((entry) =>
               entry.id === historyEntryID
-                ? {
-                    ...entry,
-                    calendarSyncStatus: "synced",
-                    calendarEventId,
-                    syncedCalendarId,
-                    syncedCalendarName,
-                    calendarDeletedAt: undefined,
-                  }
+                ? { ...entry, calendarSyncStatus: "synced", calendarEventId, syncedCalendarId, syncedCalendarName, calendarDeletedAt: undefined }
                 : entry,
             ),
             activity: (() => {
-              const entry = state.history.find(
-                (item) => item.id === historyEntryID,
-              );
-              const shouldLog = entry && entry.calendarSyncStatus !== "synced";
-
-              if (!entry || !shouldLog) {
-                return state.activity;
-              }
-
+              const entry = state.history.find((item) => item.id === historyEntryID);
+              if (!entry || entry.calendarSyncStatus === "synced") return state.activity;
               return [
-                createCalendarActivity("calendar_synced", {
-                  ...entry,
-                  calendarSyncStatus: "synced",
-                  calendarEventId,
-                  syncedCalendarId,
-                  syncedCalendarName,
-                  calendarDeletedAt: undefined,
-                }),
+                createCalendarActivity("calendar_synced", { ...entry, calendarSyncStatus: "synced", calendarEventId, syncedCalendarId, syncedCalendarName, calendarDeletedAt: undefined }),
                 ...state.activity,
               ];
             })(),
           }));
-
-          malikDebug("\u2B1C", "store sync ok", {
-            historyEntryID,
-            calendarEventId,
-            syncedCalendarId,
-          });
         },
+
         markHistoryEntryFailed(historyEntryID) {
           set((state) => ({
             history: state.history.map((entry) =>
-              entry.id === historyEntryID
-                ? {
-                    ...entry,
-                    calendarSyncStatus: "failed",
-                  }
-                : entry,
+              entry.id === historyEntryID ? { ...entry, calendarSyncStatus: "failed" } : entry,
             ),
             activity: (() => {
-              const entry = state.history.find(
-                (item) => item.id === historyEntryID,
-              );
-              const shouldLog = entry && entry.calendarSyncStatus !== "failed";
-
-              if (!entry || !shouldLog) {
-                return state.activity;
-              }
-
-              return [
-                createCalendarActivity("calendar_sync_failed", {
-                  ...entry,
-                  calendarSyncStatus: "failed",
-                }),
-                ...state.activity,
-              ];
+              const entry = state.history.find((item) => item.id === historyEntryID);
+              if (!entry || entry.calendarSyncStatus === "failed") return state.activity;
+              return [createCalendarActivity("calendar_sync_failed", { ...entry, calendarSyncStatus: "failed" }), ...state.activity];
             })(),
           }));
-
-          malikDebug("\u{1F7E5}", "store sync failed", { historyEntryID });
         },
+
         markHistoryEntriesDeleted(historyEntryIDs) {
           const deletedAt = new Date().toISOString();
-
           set((state) => ({
             history: state.history.map((entry) =>
               historyEntryIDs.includes(entry.id)
-                ? {
-                    ...entry,
-                    calendarSyncStatus: "deleted",
-                    calendarDeletedAt: deletedAt,
-                  }
+                ? { ...entry, calendarSyncStatus: "deleted", calendarDeletedAt: deletedAt }
                 : entry,
             ),
           }));
-
-          malikDebug("\u2B1C", "store calendar events deleted", {
-            count: historyEntryIDs.length,
-          });
         },
+
         logCalendarConnected(subjectLabel) {
           set((state) => ({
-            activity: [
-              {
-                id: `calendar-connected-${Date.now()}`,
-                kind: "calendar_connected" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Google Calendar",
-                taskHistoryEntryID: generateRandomID(),
-                subjectLabel,
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `calendar-connected-${Date.now()}`, kind: "calendar_connected" as const, createdAt: new Date().toISOString(), taskLabel: "Google Calendar", taskHistoryEntryID: generateRandomID(), subjectLabel }, ...state.activity],
           }));
         },
+
         logCalendarDisconnected(subjectLabel) {
           set((state) => ({
-            activity: [
-              {
-                id: `calendar-disconnected-${Date.now()}`,
-                kind: "calendar_disconnected" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Google Calendar",
-                taskHistoryEntryID: generateRandomID(),
-                subjectLabel,
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `calendar-disconnected-${Date.now()}`, kind: "calendar_disconnected" as const, createdAt: new Date().toISOString(), taskLabel: "Google Calendar", taskHistoryEntryID: generateRandomID(), subjectLabel }, ...state.activity],
           }));
         },
+
         logCalendarSyncEnabled(subjectLabel) {
           set((state) => ({
-            activity: [
-              {
-                id: `calendar-enabled-${Date.now()}`,
-                kind: "calendar_enabled" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Google Calendar",
-                taskHistoryEntryID: generateRandomID(),
-                subjectLabel,
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `calendar-enabled-${Date.now()}`, kind: "calendar_enabled" as const, createdAt: new Date().toISOString(), taskLabel: "Google Calendar", taskHistoryEntryID: generateRandomID(), subjectLabel }, ...state.activity],
           }));
         },
+
         logCalendarSyncDisabled(subjectLabel) {
           set((state) => ({
-            activity: [
-              {
-                id: `calendar-disabled-${Date.now()}`,
-                kind: "calendar_disabled" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Google Calendar",
-                taskHistoryEntryID: generateRandomID(),
-                subjectLabel,
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `calendar-disabled-${Date.now()}`, kind: "calendar_disabled" as const, createdAt: new Date().toISOString(), taskLabel: "Google Calendar", taskHistoryEntryID: generateRandomID(), subjectLabel }, ...state.activity],
           }));
         },
-        logCalendarTargetChanged(previousCalendarName, nextCalendarName) {
-          if (previousCalendarName === nextCalendarName) {
-            return;
-          }
 
+        logCalendarTargetChanged(previousCalendarName, nextCalendarName) {
+          if (previousCalendarName === nextCalendarName) return;
           set((state) => ({
-            activity: [
-              {
-                id: `calendar-target-changed-${Date.now()}`,
-                kind: "calendar_target_changed" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Google Calendar",
-                taskHistoryEntryID: generateRandomID(),
-                oldValue: previousCalendarName,
-                newValue: nextCalendarName,
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `calendar-target-changed-${Date.now()}`, kind: "calendar_target_changed" as const, createdAt: new Date().toISOString(), taskLabel: "Google Calendar", taskHistoryEntryID: generateRandomID(), oldValue: previousCalendarName, newValue: nextCalendarName }, ...state.activity],
           }));
         },
+
         logSettingsCursorEnabled() {
           set((state) => ({
-            activity: [
-              {
-                id: `settings-cursor-enabled-${Date.now()}`,
-                kind: "settings_cursor_enabled" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Settings",
-                taskHistoryEntryID: generateRandomID(),
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `settings-cursor-enabled-${Date.now()}`, kind: "settings_cursor_enabled" as const, createdAt: new Date().toISOString(), taskLabel: "Settings", taskHistoryEntryID: generateRandomID() }, ...state.activity],
           }));
         },
+
         logSettingsCursorDisabled() {
           set((state) => ({
-            activity: [
-              {
-                id: `settings-cursor-disabled-${Date.now()}`,
-                kind: "settings_cursor_disabled" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Settings",
-                taskHistoryEntryID: generateRandomID(),
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `settings-cursor-disabled-${Date.now()}`, kind: "settings_cursor_disabled" as const, createdAt: new Date().toISOString(), taskLabel: "Settings", taskHistoryEntryID: generateRandomID() }, ...state.activity],
           }));
         },
-        logSettingsPrimaryColorChanged(previousColor, nextColor) {
-          if (previousColor === nextColor) {
-            return;
-          }
 
+        logSettingsPrimaryColorChanged(previousColor, nextColor) {
+          if (previousColor === nextColor) return;
           set((state) => ({
-            activity: [
-              {
-                id: `settings-color-changed-${Date.now()}`,
-                kind: "settings_primary_color_changed" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: "Settings",
-                taskHistoryEntryID: generateRandomID(),
-                oldValue: previousColor,
-                newValue: nextColor,
-              },
-              ...state.activity,
-            ],
+            activity: [{ id: `settings-color-changed-${Date.now()}`, kind: "settings_primary_color_changed" as const, createdAt: new Date().toISOString(), taskLabel: "Settings", taskHistoryEntryID: generateRandomID(), oldValue: previousColor, newValue: nextColor }, ...state.activity],
           }));
         },
+
         getRootTaskIDs() {
-          return get()
-            .tasks.filter((task) => !task.parentId && !task.isFinished)
+          const { tasks, activeTagFilter } = get();
+          return tasks
+            .filter((task) => {
+              if (task.isFinished) return false;
+              if (activeTagFilter && !task.tagIds?.includes(activeTagFilter)) return false;
+              return true;
+            })
             .sort(sortByPosition)
             .map((task) => task.id);
         },
+
         getTaskFromID(taskID) {
-          return get().tasks.find((task) => task.id === taskID) || null;
+          return get().tasks.find((task) => task.id === taskID) ?? null;
         },
-        getTaskChildrenIDs(taskID) {
-          return get()
-            .tasks.filter((task) => task.parentId === taskID && !task.isFinished)
-            .sort(sortByPosition)
-            .map((task) => task.id);
-        },
+
         toggleFavorite(taskID) {
           set((state) => ({
             tasks: state.tasks.map((task) =>
-              task.id === taskID
-                ? { ...task, isFavorite: !task.isFavorite }
-                : task,
+              task.id === taskID ? { ...task, isFavorite: !task.isFavorite } : task,
             ),
           }));
-
-          const task = get().getTaskFromID(taskID);
-          malikDebug("\u2B1C", "store task favorite toggled", {
-            taskID,
-            label: task?.label,
-            isFavorite: task?.isFavorite,
-          });
         },
+
         renameTask(taskID, newLabel) {
           const trimmed = newLabel.trim();
           if (!trimmed) return false;
-
           const task = get().getTaskFromID(taskID);
           if (!task || task.label === trimmed) return false;
 
           const renamedAt = new Date().toISOString();
-
           set((state) => ({
             tasks: state.tasks.map((item) =>
               item.id === taskID ? { ...item, label: trimmed } : item,
             ),
             activity: [
-              {
-                id: `task-renamed-${Date.now()}`,
-                kind: "task_renamed" as const,
-                createdAt: renamedAt,
-                taskLabel: trimmed,
-                taskHistoryEntryID: taskID,
-                oldLabel: task.label,
-                newLabel: trimmed,
-              },
+              { id: `task-renamed-${Date.now()}`, kind: "task_renamed" as const, createdAt: renamedAt, taskLabel: trimmed, taskHistoryEntryID: taskID, oldLabel: task.label, newLabel: trimmed },
               ...state.activity,
             ],
           }));
-
           return true;
         },
+
         moveTask(taskID, targetTaskID, placement) {
           const { tasks: currentTasks } = get();
-
-          if (taskID === targetTaskID) {
-            return false;
-          }
+          if (taskID === targetTaskID) return false;
 
           const movingTask = currentTasks.find((item) => item.id === taskID);
-          const targetTask = currentTasks.find(
-            (item) => item.id === targetTaskID,
-          );
+          const targetTask = currentTasks.find((item) => item.id === targetTaskID);
+          if (!movingTask || !targetTask) return false;
 
-          if (!movingTask || !targetTask) {
-            return false;
-          }
-
-          const descendantIDs = collectDescendantsByParent(
-            currentTasks,
-            taskID,
-          );
-
-          if (descendantIDs.includes(targetTaskID)) {
-            return false;
-          }
-
-          const movePlan = computeTaskMovePlan(
-            currentTasks,
-            movingTask,
-            targetTask,
-            placement,
-          );
-
-          if (!movePlan) {
-            return false;
-          }
+          const movePlan = computeTaskMovePlan(currentTasks, movingTask, targetTask, placement);
+          if (!movePlan) return false;
 
           set((state) => ({
             tasks: applyTaskMovePlan(state.tasks, movePlan),
-            activity: [
-              createTaskRepositionActivity(taskID, movingTask.label, movePlan),
-              ...state.activity,
-            ],
+            activity: [createTaskRepositionActivity(taskID, movingTask.label, movePlan), ...state.activity],
           }));
-
           return true;
         },
+
         deleteTask(taskID) {
           const { tasks: currentTasks, activeSession } = get();
           const task = currentTasks.find((item) => item.id === taskID);
           if (!task) return false;
-
-          const subtreeIDs = [
-            taskID,
-            ...collectDescendantsByParent(currentTasks, taskID),
-          ];
-
-          if (activeSession && subtreeIDs.includes(activeSession.taskId)) {
-            return false;
-          }
+          if (activeSession?.taskId === taskID) return false;
 
           const deletedAt = new Date().toISOString();
-          const deletedSubtree = currentTasks
-            .filter((item) => subtreeIDs.includes(item.id))
-            .map((item) => ({ ...item, deletedAt }));
-
           set((state) => ({
-            tasks: state.tasks.filter((item) => !subtreeIDs.includes(item.id)),
-            deletedTasks: [...state.deletedTasks, ...deletedSubtree],
+            tasks: state.tasks.filter((item) => item.id !== taskID),
+            deletedTasks: [...state.deletedTasks, { ...task, deletedAt }],
             activity: [
-              {
-                id: `task-deleted-${Date.now()}`,
-                kind: "task_deleted" as const,
-                createdAt: deletedAt,
-                taskLabel: task.label,
-                taskHistoryEntryID: taskID,
-              },
+              { id: `task-deleted-${Date.now()}`, kind: "task_deleted" as const, createdAt: deletedAt, taskLabel: task.label, taskHistoryEntryID: taskID },
               ...state.activity,
             ],
           }));
-
           return true;
         },
 
         clearTrash() {
           set((state) => ({ ...state, deletedTasks: [] }));
         },
+
         restoreDeletedTask(taskID) {
-          const { deletedTasks, tasks } = get();
+          const { deletedTasks } = get();
           const taskToRestore = deletedTasks.find((t) => t.id === taskID);
           if (!taskToRestore) return false;
 
-          // Check if parent exists, else set as root
-          let parentId = taskToRestore.parentId;
-          if (parentId && !tasks.some((t) => t.id === parentId)) {
-            parentId = undefined;
-          }
-
-          // Restore the task (and its subtree)
-          const subtreeIDs = [
-            taskID,
-            ...collectDescendantsByParent(deletedTasks, taskID),
-          ];
-          const subtree = deletedTasks.filter((t) => subtreeIDs.includes(t.id));
-          // Update parentId for root if needed
-          const restoredSubtree = subtree.map((t) => {
-            if (t.id === taskID) {
-              return { ...t, parentId };
-            }
-            // If parent is not in subtree, set as root
-            if (t.parentId && !subtreeIDs.includes(t.parentId)) {
-              return { ...t, parentId: undefined };
-            }
-            return t;
-          });
-
           set((state) => ({
-            tasks: [...state.tasks, ...restoredSubtree],
-            deletedTasks: state.deletedTasks.filter(
-              (t) => !subtreeIDs.includes(t.id),
-            ),
+            tasks: [...state.tasks, { ...taskToRestore, deletedAt: undefined }],
+            deletedTasks: state.deletedTasks.filter((t) => t.id !== taskID),
             activity: [
-              {
-                id: `task-restored-${Date.now()}`,
-                kind: "task_restored",
-                createdAt: new Date().toISOString(),
-                taskLabel: taskToRestore.label,
-                taskHistoryEntryID: taskID,
-              },
+              { id: `task-restored-${Date.now()}`, kind: "task_restored" as const, createdAt: new Date().toISOString(), taskLabel: taskToRestore.label, taskHistoryEntryID: taskID },
               ...state.activity,
             ],
           }));
           return true;
         },
+
         logTaskCopied(taskID, target) {
           const task = get().getTaskFromID(taskID);
           if (!task) return;
-
           set((state) => ({
             activity: [
-              {
-                id: `task-copied-${Date.now()}`,
-                kind: "task_copied" as const,
-                createdAt: new Date().toISOString(),
-                taskLabel: task.label,
-                taskHistoryEntryID: taskID,
-                copyTarget: target,
-              },
+              { id: `task-copied-${Date.now()}`, kind: "task_copied" as const, createdAt: new Date().toISOString(), taskLabel: task.label, taskHistoryEntryID: taskID, copyTarget: target },
               ...state.activity,
             ],
           }));
-        },
-        hasActiveChildRecursive(taskID) {
-          const activeTaskID = get().activeSession?.taskId;
-          if (!activeTaskID) return false;
-
-          const checkChildren = (parentID: string): boolean => {
-            const childrenIDs = get()
-              .tasks.filter((task) => task.parentId === parentID)
-              .map((task) => task.id);
-
-            if (childrenIDs.includes(activeTaskID)) {
-              return true;
-            }
-
-            return childrenIDs.some((childID) => checkChildren(childID));
-          };
-
-          return checkChildren(taskID);
         },
       }),
       {
@@ -1075,43 +726,40 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           tasks: state.tasks,
+          tags: state.tags,
+          deletedTasks: state.deletedTasks,
           activeSession: state.activeSession,
           history: state.history,
           activity: state.activity,
-          taskExpanded: state.taskExpanded,
         }),
         migrate: (persistedState) => {
-          const maybeStorageValue = persistedState as {
-            state?: unknown;
-            version?: number;
-          } | null;
+          const maybeStorageValue = persistedState as { state?: unknown; version?: number } | null;
           return (maybeStorageValue?.state ?? persistedState) as unknown;
         },
         merge: (persistedState, currentState) => {
           const rawState = persistedState as unknown;
           const validated = validatePersistedState(rawState, tasks);
 
+          if (validated.hasLegacyNesting) {
+            malikDebug("🟥", "store legacy nested data detected, requesting reset");
+            return { ...currentState, ...createDefaultState(tasks), deletedTasks: [], needsDataReset: true };
+          }
+
           if (!validated.isValid) {
-            malikDebug("\u{1F7E5}", "store localstorage invalid, cleaned");
+            malikDebug("🟥", "store localstorage invalid, cleaned");
             if (typeof window !== "undefined") {
               window.localStorage.removeItem(TODO_STORE_STORAGE_KEY);
             }
           } else {
-            malikDebug("\u2B1C", "store localstorage valid");
+            malikDebug("⬜", "store localstorage valid");
           }
 
           if (validated.isValid && isLegacySeededFakeState(validated.state)) {
-            malikDebug("\u2B1C", "store legacy fake seed cleaned");
-            return {
-              ...currentState,
-              ...createDefaultState(tasks),
-            };
+            malikDebug("⬜", "store legacy fake seed cleaned");
+            return { ...currentState, ...createDefaultState(tasks) };
           }
 
-          return {
-            ...currentState,
-            ...validated.state,
-          };
+          return { ...currentState, ...validated.state };
         },
       },
     ),

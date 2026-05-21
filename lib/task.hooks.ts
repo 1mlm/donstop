@@ -80,7 +80,6 @@ export function useTaskRunningSecondsThrottled(taskID: TaskID) {
 
 export function useActiveTaskSummary() {
   const activeSession = useTODOStore((state) => state.activeSession);
-  const tasks = useTODOStore((state) => state.tasks);
   const activeTask = useTODOStore((state) =>
     activeSession ? state.getTaskFromID(activeSession.taskId) : null,
   );
@@ -90,33 +89,11 @@ export function useActiveTaskSummary() {
     return null;
   }
 
-  const tasksByID = new Map(tasks.map((task) => [task.id, task]));
-  const parentPath: Array<{ id: string; label: string; key: string }> = [];
-  let currentParentID = activeTask.parentId;
-
-  while (currentParentID) {
-    const parentTask = tasksByID.get(currentParentID);
-
-    if (!parentTask) {
-      break;
-    }
-
-    const prevKey = parentPath[0]?.key;
-    const nextKey = prevKey ? `${parentTask.id}/${prevKey}` : parentTask.id;
-
-    parentPath.unshift({
-      id: parentTask.id,
-      label: parentTask.label,
-      key: nextKey,
-    });
-    currentParentID = parentTask.parentId;
-  }
-
   return {
     activeTask,
     storedSeconds: activeTask.time,
     runningSeconds,
     elapsedSeconds: activeTask.time + runningSeconds,
-    parentPath,
+    parentPath: [] as Array<{ id: string; label: string; key: string }>,
   };
 }

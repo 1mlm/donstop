@@ -2,6 +2,7 @@ import { z } from "zod";
 import type {
   ActiveTaskSession,
   HistoryActivityItem,
+  TagObj,
   TaskHistoryEntry,
   TaskObj,
 } from "../types";
@@ -10,9 +11,11 @@ import { generateRandomID, getElapsedSeconds } from "../util";
 export const TODO_STORE_STORAGE_KEY = "todo-app-store";
 
 export type TaskID = TaskObj["id"];
+export type TagID = TagObj["id"];
 
 export type PersistedTODOState = {
   tasks: TaskObj[];
+  tags: TagObj[];
   deletedTasks: TaskObj[];
   activeSession: ActiveTaskSession | null;
   history: TaskHistoryEntry[];
@@ -22,13 +25,19 @@ export type PersistedTODOState = {
 const taskObjSchema = z.object({
   id: z.string(),
   label: z.string(),
-  parentId: z.string().optional(),
   position: z.number(),
   time: z.number(),
+  tagIds: z.array(z.string()).optional(),
   isFinished: z.boolean().optional(),
   finishedAt: z.string().optional(),
   isFavorite: z.boolean().optional(),
   lastActivatedAt: z.string().optional(),
+});
+
+const tagSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  icon: z.string(),
 });
 
 const activeTaskSessionSchema = z
@@ -104,6 +113,7 @@ const historyActivityItemSchema = z.object({
 
 const persistedTodoStateSchema = z.object({
   tasks: z.array(taskObjSchema),
+  tags: z.array(tagSchema).optional(),
   deletedTasks: z.array(taskObjSchema).optional(),
   activeSession: activeTaskSessionSchema,
   history: z.array(taskHistoryEntrySchema),
@@ -124,6 +134,7 @@ export function sortByPosition(left: TaskObj, right: TaskObj) {
 export function createDefaultState(tasks: TaskObj[]): PersistedTODOState {
   return {
     tasks,
+    tags: [],
     deletedTasks: [],
     activeSession: null,
     history: [],
@@ -134,24 +145,32 @@ export function createDefaultState(tasks: TaskObj[]): PersistedTODOState {
 export function validatePersistedState(
   input: unknown,
   tasks: TaskObj[],
-): { state: PersistedTODOState; isValid: boolean } {
+): { state: PersistedTODOState; isValid: boolean; hasLegacyNesting: boolean } {
+  const hasLegacyNesting = Boolean(
+    input &&
+      typeof input === "object" &&
+      "tasks" in input &&
+      Array.isArray((input as Record<string, unknown>).tasks) &&
+      (input as { tasks: unknown[] }).tasks.some(
+        (t) => t && typeof t === "object" && "parentId" in (t as object),
+      ),
+  );
+
   const result = persistedTodoStateSchema.safeParse(input);
 
-  if (result.success) {
-    // Patch: If deletedTasks is missing, default to []
+  if (result.success && !hasLegacyNesting) {
     const state = {
       ...result.data,
+      tags: result.data.tags ?? [],
       deletedTasks: result.data.deletedTasks ?? [],
     };
-    return {
-      state,
-      isValid: true,
-    };
+    return { state, isValid: true, hasLegacyNesting: false };
   }
 
   return {
     state: createDefaultState(tasks),
-    isValid: false,
+    isValid: !hasLegacyNesting && result.success,
+    hasLegacyNesting,
   };
 }
 

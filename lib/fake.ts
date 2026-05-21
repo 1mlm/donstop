@@ -1,249 +1,113 @@
 import { generateRandomID } from "../lib/util";
-import type { HistoryActivityItem, TaskHistoryEntry, TaskObj } from "./types";
+import type { HistoryActivityItem, TagObj, TaskHistoryEntry, TaskObj } from "./types";
 
-const baseFakeTasks: TaskObj[] = [
+const FAKE_TAGS: TagObj[] = [
+  { id: "tag-school", name: "School", icon: "Mortarboard01Icon" },
+  { id: "tag-freelance", name: "Freelance", icon: "BriefcaseIcon" },
+  { id: "tag-health", name: "Health", icon: "Activity01Icon" },
+  { id: "tag-personal", name: "Personal", icon: "Home01Icon" },
+];
+
+const FAKE_TASKS: TaskObj[] = [
   {
-    id: "school",
-    label: "School",
-    position: 1,
-    time: 22140,
+    id: "task-calc",
+    label: "Calculus problem set 4",
+    position: 0,
+    time: 7200,
+    tagIds: ["tag-school"],
     isFavorite: true,
+    lastActivatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "school-chem",
-    label: "Chemistry",
-    parentId: "school",
+    id: "task-chem",
+    label: "Organic chemistry quiz flashcards",
     position: 1,
-    time: 6420,
+    time: 3640,
+    tagIds: ["tag-school"],
+    lastActivatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "school-chem-lab",
-    label: "Lab report: titration",
-    parentId: "school-chem",
-    position: 1,
-    time: 1840,
-    isFinished: true,
-    finishedAt: "2026-03-09T18:15:00.000Z",
-  },
-  {
-    id: "school-chem-quiz",
-    label: "Organic quiz flashcards",
-    parentId: "school-chem",
+    id: "task-freelance",
+    label: "Client dashboard redesign",
     position: 2,
-    time: 920,
-  },
-  {
-    id: "school-math",
-    label: "Math",
-    parentId: "school",
-    position: 2,
-    time: 7710,
+    time: 9120,
+    tagIds: ["tag-freelance"],
     isFavorite: true,
+    lastActivatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "school-math-calc",
-    label: "Calculus set 4",
-    parentId: "school-math",
-    position: 1,
-    time: 2010,
-  },
-  {
-    id: "school-math-calc-q1",
-    label: "Q1 limits review",
-    parentId: "school-math-calc",
-    position: 1,
-    time: 620,
-    isFinished: true,
-    finishedAt: "2026-03-10T19:05:00.000Z",
-  },
-  {
-    id: "school-math-calc-q2",
-    label: "Q2 optimization",
-    parentId: "school-math-calc",
-    position: 2,
-    time: 540,
-  },
-  {
-    id: "school-math-alg",
-    label: "Linear algebra recap",
-    parentId: "school-math",
-    position: 2,
-    time: 980,
-  },
-  {
-    id: "school-history",
-    label: "History",
-    parentId: "school",
+    id: "task-invoice",
+    label: "Send invoice for March",
     position: 3,
-    time: 3230,
+    time: 480,
+    tagIds: ["tag-freelance"],
+    lastActivatedAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "school-history-essay",
-    label: "Essay draft: post-war Europe",
-    parentId: "school-history",
-    position: 1,
-    time: 1540,
-    isFinished: true,
-    finishedAt: "2026-03-08T16:22:00.000Z",
-  },
-  {
-    id: "school-history-sources",
-    label: "Primary source notes",
-    parentId: "school-history",
-    position: 2,
-    time: 870,
-  },
-
-  {
-    id: "projects",
-    label: "Projects",
-    position: 2,
-    time: 16820,
-  },
-  {
-    id: "projects-github",
-    label: "GitHub",
-    parentId: "projects",
-    position: 1,
-    time: 8340,
-  },
-  {
-    id: "projects-github-todo",
-    label: "todo-app UI polish",
-    parentId: "projects-github",
-    position: 1,
-    time: 3810,
-    isFavorite: true,
-  },
-  {
-    id: "projects-github-prisma",
-    label: "prisma-orm migration notes",
-    parentId: "projects-github",
-    position: 2,
-    time: 1520,
-  },
-  {
-    id: "projects-github-ts",
-    label: "typescript utility cleanup",
-    parentId: "projects-github",
-    position: 3,
-    time: 1290,
-  },
-  {
-    id: "projects-drawing",
-    label: "Drawing",
-    parentId: "projects",
-    position: 2,
-    time: 2260,
-    isFinished: true,
-    finishedAt: "2026-03-07T20:10:00.000Z",
-  },
-  {
-    id: "projects-drawing-refs",
-    label: "Reference board",
-    parentId: "projects-drawing",
-    position: 1,
-    time: 940,
-  },
-
-  {
-    id: "fitness",
-    label: "Workout",
-    position: 3,
-    time: 3600,
-  },
-
-  {
-    id: "admin",
-    label: "Admin",
+    id: "task-history",
+    label: "History essay outline",
     position: 4,
-    time: 1420,
-    isFinished: true,
-    finishedAt: "2026-03-10T10:10:00.000Z",
+    time: 2700,
+    tagIds: ["tag-school"],
+  },
+  {
+    id: "task-run",
+    label: "Morning run (5km)",
+    position: 5,
+    time: 1800,
+    tagIds: ["tag-health"],
+    lastActivatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: "task-groceries",
+    label: "Grocery shopping list",
+    position: 6,
+    time: 600,
+    tagIds: ["tag-personal"],
   },
 ];
 
-export function createFakeTasks(): TaskObj[] {
-  return baseFakeTasks.map((task) => ({ ...task, time: task.time || 0 }));
+export function createFakeTags(): TagObj[] {
+  return FAKE_TAGS.map((t) => ({ ...t }));
 }
 
-export const FAKE_TASKS: TaskObj[] = createFakeTasks();
-
-function pickCalendarStatus(
-  index: number,
-): TaskHistoryEntry["calendarSyncStatus"] {
-  if (index % 5 === 0) return "failed";
-  if (index % 3 === 0) return "synced";
-  return "pending";
+export function createFakeTasks(): TaskObj[] {
+  return FAKE_TASKS.map((t) => ({ ...t }));
 }
 
 export function createFakeHistoryData(
   tasks: TaskObj[],
-  nowMs = Date.now(),
-): {
-  history: TaskHistoryEntry[];
-  activity: HistoryActivityItem[];
-} {
-  const candidates = tasks
-    .filter((task) => task.label.trim().length > 0)
-    .slice()
-    .sort((a, b) => (b.time || 0) - (a.time || 0));
-
-  if (candidates.length === 0) {
-    return { history: [], activity: [] };
-  }
-
-  const sessionCount = Math.min(
-    10,
-    Math.max(5, Math.floor(candidates.length / 2)),
-  );
+  nowMs: number,
+): { history: TaskHistoryEntry[]; activity: HistoryActivityItem[] } {
   const history: TaskHistoryEntry[] = [];
   const activity: HistoryActivityItem[] = [];
 
-  const pushActivity = (
-    item: Omit<HistoryActivityItem, "id" | "taskHistoryEntryID"> & {
-      taskHistoryEntryID?: string;
-    },
-  ) => {
-    activity.push({
-      id: generateRandomID(),
-      taskHistoryEntryID: item.taskHistoryEntryID || generateRandomID(),
-      ...item,
-    });
-  };
-
-  let cursorMs = nowMs;
-
-  for (let index = 0; index < sessionCount; index += 1) {
-    const task = candidates[index % candidates.length];
-    const gapSeconds = 4 * 60 + Math.floor(Math.random() * 18 * 60);
-    const durationSeconds = 8 * 60 + Math.floor(Math.random() * 92 * 60);
-
-    const endedAtMs = cursorMs - gapSeconds * 1000;
-    const startedAtMs = endedAtMs - durationSeconds * 1000;
-    const startedAt = new Date(startedAtMs).toISOString();
-    const endedAt = new Date(endedAtMs).toISOString();
+  function pushHistory(
+    task: TaskObj,
+    startOffsetMs: number,
+    durationMs: number,
+    calendarSynced = false,
+  ) {
+    const startedAt = new Date(nowMs - startOffsetMs).toISOString();
+    const endedAt = new Date(nowMs - startOffsetMs + durationMs).toISOString();
+    const durationSeconds = Math.floor(durationMs / 1000);
     const entryId = generateRandomID();
 
-    const historyEntry: TaskHistoryEntry = {
+    const entry: TaskHistoryEntry = {
       id: entryId,
       taskId: task.id,
       taskLabel: task.label,
       startedAt,
       endedAt,
       durationSeconds,
-      calendarSyncStatus: pickCalendarStatus(index),
+      calendarSyncStatus: calendarSynced ? "synced" : "pending",
+      calendarEventId: calendarSynced ? `gcal-${entryId}` : undefined,
     };
 
-    history.push(historyEntry);
-    pushActivity({
-      kind: "task_started",
-      createdAt: startedAt,
-      taskLabel: task.label,
-      taskHistoryEntryID: entryId,
-    });
+    history.push(entry);
 
-    pushActivity({
+    activity.push({
+      id: generateRandomID(),
       kind: "task_session",
       createdAt: endedAt,
       taskLabel: task.label,
@@ -253,105 +117,84 @@ export function createFakeHistoryData(
       endedAt,
     });
 
-    if (index % 3 === 0 && candidates.length > 1) {
-      const source = candidates[(index + 1) % candidates.length];
-      pushActivity({
-        kind: "task_transferred",
-        createdAt: new Date(startedAtMs + 45 * 1000).toISOString(),
+    if (calendarSynced) {
+      activity.push({
+        id: generateRandomID(),
+        kind: "calendar_synced",
+        createdAt: endedAt,
         taskLabel: task.label,
-        sourceTaskLabel: source.label,
-        durationSeconds: 60 + (index % 4) * 45,
-      });
-    }
-
-    if (index % 4 === 0) {
-      pushActivity({
-        kind: "task_repositioned",
-        createdAt: new Date(startedAtMs + 30 * 1000).toISOString(),
-        taskLabel: task.label,
-        moveDestinationParentLabel:
-          index % 2 === 0 ? candidates[0]?.label : undefined,
-        moveBeforeTaskLabel: candidates[(index + 2) % candidates.length]?.label,
-        moveAfterTaskLabel: candidates[(index + 3) % candidates.length]?.label,
-      });
-    }
-
-    if (index % 5 === 0) {
-      pushActivity({
-        kind: "task_finished",
-        createdAt: new Date(endedAtMs + 10 * 1000).toISOString(),
-        taskLabel: task.label,
-        durationSeconds,
         taskHistoryEntryID: entryId,
       });
     }
-
-    cursorMs = startedAtMs;
   }
 
-  const systemMoments = [
-    nowMs - 20 * 60 * 1000,
-    nowMs - 18 * 60 * 1000,
-    nowMs - 17 * 60 * 1000,
-    nowMs - 15 * 60 * 1000,
-    nowMs - 13 * 60 * 1000,
-    nowMs - 10 * 60 * 1000,
-    nowMs - 8 * 60 * 1000,
-    nowMs - 6 * 60 * 1000,
-  ];
+  function pushActivity(
+    partial: Omit<HistoryActivityItem, "id" | "taskHistoryEntryID"> & { taskHistoryEntryID?: string },
+  ) {
+    activity.push({
+      id: generateRandomID(),
+      taskHistoryEntryID: generateRandomID(),
+      ...partial,
+    } as HistoryActivityItem);
+  }
+
+  const calc = tasks.find((t) => t.id === "task-calc");
+  const chem = tasks.find((t) => t.id === "task-chem");
+  const freelance = tasks.find((t) => t.id === "task-freelance");
+  const invoice = tasks.find((t) => t.id === "task-invoice");
+  const run = tasks.find((t) => t.id === "task-run");
+
+  if (calc) {
+    pushHistory(calc, 2 * 3600 * 1000, 45 * 60 * 1000, true);
+    pushHistory(calc, 6 * 3600 * 1000, 90 * 60 * 1000, true);
+    pushHistory(calc, 26 * 3600 * 1000, 60 * 60 * 1000);
+  }
+  if (chem) {
+    pushHistory(chem, 5 * 3600 * 1000, 35 * 60 * 1000);
+    pushHistory(chem, 29 * 3600 * 1000, 50 * 60 * 1000, true);
+  }
+  if (freelance) {
+    pushHistory(freelance, 24 * 3600 * 1000, 120 * 60 * 1000, true);
+    pushHistory(freelance, 48 * 3600 * 1000, 90 * 60 * 1000, true);
+  }
+  if (invoice) {
+    pushHistory(invoice, 26 * 3600 * 1000, 8 * 60 * 1000);
+  }
+  if (run) {
+    pushHistory(run, 48 * 3600 * 1000, 30 * 60 * 1000);
+    pushHistory(run, 72 * 3600 * 1000, 28 * 60 * 1000);
+  }
+
+  pushActivity({
+    kind: "task_finished",
+    createdAt: new Date(nowMs - 3 * 3600 * 1000).toISOString(),
+    taskLabel: "Q1 limits review",
+    durationSeconds: 620,
+  });
 
   pushActivity({
     kind: "calendar_connected",
-    createdAt: new Date(systemMoments[0]).toISOString(),
+    createdAt: new Date(nowMs - 20 * 60 * 1000).toISOString(),
     taskLabel: "Google Calendar",
     subjectLabel: "student@example.com",
   });
   pushActivity({
     kind: "calendar_enabled",
-    createdAt: new Date(systemMoments[1]).toISOString(),
+    createdAt: new Date(nowMs - 18 * 60 * 1000).toISOString(),
     taskLabel: "Google Calendar",
     subjectLabel: "DonStop",
   });
   pushActivity({
-    kind: "settings_cursor_disabled",
-    createdAt: new Date(systemMoments[2]).toISOString(),
-    taskLabel: "Settings",
-  });
-  pushActivity({
     kind: "settings_cursor_enabled",
-    createdAt: new Date(systemMoments[3]).toISOString(),
+    createdAt: new Date(nowMs - 15 * 60 * 1000).toISOString(),
     taskLabel: "Settings",
   });
   pushActivity({
     kind: "settings_primary_color_changed",
-    createdAt: new Date(systemMoments[4]).toISOString(),
+    createdAt: new Date(nowMs - 13 * 60 * 1000).toISOString(),
     taskLabel: "Settings",
     oldValue: "blue",
     newValue: "amber",
-  });
-  pushActivity({
-    kind: "calendar_disabled",
-    createdAt: new Date(systemMoments[5]).toISOString(),
-    taskLabel: "Google Calendar",
-    subjectLabel: "DonStop",
-  });
-  pushActivity({
-    kind: "calendar_target_changed",
-    createdAt: new Date(systemMoments[6] - 45 * 1000).toISOString(),
-    taskLabel: "Google Calendar",
-    oldValue: "DonStop",
-    newValue: "School",
-  });
-  pushActivity({
-    kind: "calendar_enabled",
-    createdAt: new Date(systemMoments[6]).toISOString(),
-    taskLabel: "Google Calendar",
-    subjectLabel: "DonStop",
-  });
-  pushActivity({
-    kind: "calendar_disconnected",
-    createdAt: new Date(systemMoments[7]).toISOString(),
-    taskLabel: "Google Calendar",
   });
 
   history.sort(

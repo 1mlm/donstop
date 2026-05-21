@@ -28,7 +28,6 @@ import { TaskDndProvider } from "./TaskDndContext";
 import { TaskDragOverlayCard } from "./TaskDragOverlayCard";
 import TaskList from "./TaskList";
 import {
-  getDescendantsOfTask,
   isEdgeDropContainerID,
   isPointerInBottomSnapZone,
   isPointerInsideBounds,
@@ -67,7 +66,6 @@ export default function TaskBar() {
   const createTask = useTODOStore((state) => state.createTask);
   const moveTask = useTODOStore((state) => state.moveTask);
   const getTaskFromID = useTODOStore((state) => state.getTaskFromID);
-  const getTaskChildrenIDs = useTODOStore((state) => state.getTaskChildrenIDs);
   const allTasks = useTODOStore((state) => state.tasks);
   const [draggingTaskID, setDraggingTaskID] = useState<TaskID | null>(null);
   const [isPointerWithinDropArea, setIsPointerWithinDropArea] = useState(true);
@@ -88,20 +86,35 @@ export default function TaskBar() {
   );
 
   const draggingTask = draggingTaskID ? getTaskFromID(draggingTaskID) : null;
-  const draggingTaskChildrenCount = draggingTaskID
-    ? getTaskChildrenIDs(draggingTaskID).length
-    : 0;
   const groupedRootTaskIDs = useMemo(() => {
     const now = new Date();
-    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const nowMidnight = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    ).getTime();
     const taskMap = new Map(allTasks.map((t) => [t.id, t]));
-    const ORDER = ["Today", "Yesterday", "2 days ago", "3 days ago", "4 days ago", "5 days ago", "6 days ago", "Last week", "__never__"];
+    const ORDER = [
+      "Today",
+      "Yesterday",
+      "2 days ago",
+      "3 days ago",
+      "4 days ago",
+      "5 days ago",
+      "6 days ago",
+      "Last week",
+      "__never__",
+    ];
     const groups = new Map<string, typeof rootTaskIDs>();
 
     function getGroupKey(lastActivatedAt: string | undefined): string {
       if (!lastActivatedAt) return "__never__";
       const d = new Date(lastActivatedAt);
-      const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const dMidnight = new Date(
+        d.getFullYear(),
+        d.getMonth(),
+        d.getDate(),
+      ).getTime();
       const diffDays = Math.round((nowMidnight - dMidnight) / 86400000);
       if (diffDays === 0) return "Today";
       if (diffDays === 1) return "Yesterday";
@@ -116,19 +129,13 @@ export default function TaskBar() {
       groups.set(key, bucket);
     }
 
-    return ORDER
-      .filter((k) => groups.has(k))
-      .map((k) => ({ label: k === "__never__" ? "Never started" : k, ids: groups.get(k) ?? [] }));
+    return ORDER.filter((k) => groups.has(k)).map((k) => ({
+      label: k === "__never__" ? "Never started" : k,
+      ids: groups.get(k) ?? [],
+    }));
   }, [rootTaskIDs, allTasks]);
 
-  const draggingDescendantIDs = useMemo(
-    () => getDescendantsOfTask(allTasks, draggingTaskID),
-    [allTasks, draggingTaskID],
-  );
-  const dndContextValue = useMemo(
-    () => ({ draggingTaskID, draggingDescendantIDs }),
-    [draggingTaskID, draggingDescendantIDs],
-  );
+  const dndContextValue = useMemo(() => ({ draggingTaskID }), [draggingTaskID]);
 
   useEffect(() => {
     if (draggingTaskID) {
@@ -352,16 +359,18 @@ export default function TaskBar() {
             </InputGroup>
           </div>
 
-          {groupedRootTaskIDs.length > 1
-            ? groupedRootTaskIDs.map((group) => (
-                <div key={group.label}>
-                  <p className="select-none px-2 pb-1 pt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/45">
-                    {group.label}
-                  </p>
-                  <TaskList taskIDs={group.ids} />
-                </div>
-              ))
-            : <TaskList taskIDs={rootTaskIDs} />}
+          {groupedRootTaskIDs.length > 1 ? (
+            groupedRootTaskIDs.map((group) => (
+              <div key={group.label}>
+                <p className="select-none px-2 pb-1 pt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/45">
+                  {group.label}
+                </p>
+                <TaskList taskIDs={group.ids} />
+              </div>
+            ))
+          ) : (
+            <TaskList taskIDs={rootTaskIDs} />
+          )}
           {rootTaskIDs.length === 0 ? (
             <p className="px-2 pt-2 text-xs text-muted-foreground/50 select-none">
               No tasks yet — type above and press Enter.
@@ -374,7 +383,6 @@ export default function TaskBar() {
             <TaskDragOverlayCard
               label={draggingTask.label}
               storedSeconds={draggingTask.time}
-              childrenCount={draggingTaskChildrenCount}
               isInvalidDrop={!isPointerWithinDropArea}
             />
           ) : null}

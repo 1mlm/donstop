@@ -12,16 +12,7 @@ function baseTasks(): TaskObj[] {
     { id: "a", label: "A", position: 0, time: 0 },
     { id: "b", label: "B", position: 1, time: 0 },
     { id: "c", label: "C", position: 2, time: 0 },
-    { id: "p", label: "Parent", position: 3, time: 0 },
-    { id: "x", label: "X", parentId: "p", position: 0, time: 0 },
-    { id: "y", label: "Y", parentId: "p", position: 1, time: 0 },
-    {
-      id: "u",
-      label: "Unrelated",
-      parentId: "independent",
-      position: 7,
-      time: 0,
-    },
+    { id: "d", label: "D", position: 3, time: 0 },
   ];
 }
 
@@ -31,7 +22,7 @@ function findTask(tasks: TaskObj[], id: string) {
   return item;
 }
 
-test("computeTaskMovePlan before in same parent reorders siblings", () => {
+test("computeTaskMovePlan before reorders correctly", () => {
   const tasks = baseTasks();
   const movingTask = findTask(tasks, "c");
   const targetTask = findTask(tasks, "a");
@@ -39,59 +30,38 @@ test("computeTaskMovePlan before in same parent reorders siblings", () => {
   const plan = computeTaskMovePlan(tasks, movingTask, targetTask, "before");
 
   assert.ok(plan);
-  assert.equal(plan.destinationParentID, undefined);
-  assert.equal(plan.oldParentID, undefined);
-  assert.equal(plan.previousSiblingPositionByID, null);
   assert.equal(plan.destinationPositionByID.get("c"), 0);
   assert.equal(plan.destinationPositionByID.get("a"), 1);
   assert.equal(plan.destinationPositionByID.get("b"), 2);
+  assert.equal(plan.destinationPositionByID.get("d"), 3);
   assert.equal(plan.movedTaskBefore, undefined);
   assert.equal(plan.movedTaskAfter, "A");
 });
 
-test("computeTaskMovePlan returns null when target is missing from destination siblings", () => {
+test("computeTaskMovePlan after reorders correctly", () => {
   const tasks = baseTasks();
   const movingTask = findTask(tasks, "a");
-  const targetTask = { ...findTask(tasks, "x"), parentId: "other" };
-
-  const plan = computeTaskMovePlan(tasks, movingTask, targetTask, "before");
-
-  assert.equal(plan, null);
-});
-
-test("computeTaskMovePlan inside move to subtask inserts at start", () => {
-  const tasks = baseTasks();
-  const movingTask = findTask(tasks, "b");
-  const targetTask = findTask(tasks, "p");
-
-  const plan = computeTaskMovePlan(tasks, movingTask, targetTask, "inside");
-
-  assert.ok(plan);
-  assert.equal(plan.destinationParentID, "p");
-  assert.equal(plan.destinationParentLabel, "Parent");
-  assert.equal(plan.destinationPositionByID.get("b"), 0);
-  assert.equal(plan.destinationPositionByID.get("x"), 1);
-  assert.equal(plan.destinationPositionByID.get("y"), 2);
-  assert.equal(plan.movedTaskBefore, undefined);
-  assert.equal(plan.movedTaskAfter, "X");
-});
-
-test("computeTaskMovePlan cross-parent captures previous sibling reindex", () => {
-  const tasks = baseTasks();
-  const movingTask = findTask(tasks, "x");
-  const targetTask = findTask(tasks, "b");
+  const targetTask = findTask(tasks, "c");
 
   const plan = computeTaskMovePlan(tasks, movingTask, targetTask, "after");
 
   assert.ok(plan);
-  assert.equal(plan.oldParentID, "p");
-  assert.equal(plan.destinationParentID, undefined);
-  assert.ok(plan.previousSiblingPositionByID);
-  assert.equal(plan.previousSiblingPositionByID?.get("y"), 0);
-  assert.equal(plan.destinationPositionByID.get("a"), 0);
-  assert.equal(plan.destinationPositionByID.get("b"), 1);
-  assert.equal(plan.destinationPositionByID.get("x"), 2);
-  assert.equal(plan.destinationPositionByID.get("c"), 3);
+  assert.equal(plan.destinationPositionByID.get("b"), 0);
+  assert.equal(plan.destinationPositionByID.get("c"), 1);
+  assert.equal(plan.destinationPositionByID.get("a"), 2);
+  assert.equal(plan.destinationPositionByID.get("d"), 3);
+  assert.equal(plan.movedTaskBefore, "C");
+  assert.equal(plan.movedTaskAfter, "D");
+});
+
+test("computeTaskMovePlan returns null when target not found", () => {
+  const tasks = baseTasks();
+  const movingTask = findTask(tasks, "a");
+  const targetTask = { id: "z", label: "Z", position: 99, time: 0 };
+
+  const plan = computeTaskMovePlan(tasks, movingTask, targetTask, "before");
+
+  assert.equal(plan, null);
 });
 
 test("computeTaskMovePlan returns null for no-op reorder", () => {
@@ -104,25 +74,19 @@ test("computeTaskMovePlan returns null for no-op reorder", () => {
   assert.equal(plan, null);
 });
 
-test("applyTaskMovePlan updates only affected siblings and preserves unrelated task", () => {
+test("applyTaskMovePlan updates positions and preserves untouched tasks", () => {
   const tasks = baseTasks();
-  const movingTask = findTask(tasks, "x");
-  const targetTask = findTask(tasks, "b");
-  const plan = computeTaskMovePlan(tasks, movingTask, targetTask, "after");
+  const movingTask = findTask(tasks, "c");
+  const targetTask = findTask(tasks, "a");
+  const plan = computeTaskMovePlan(tasks, movingTask, targetTask, "before");
   assert.ok(plan);
 
   const next = applyTaskMovePlan(tasks, plan);
 
-  const moved = findTask(next, "x");
-  const y = findTask(next, "y");
-  const unrelated = findTask(next, "u");
-
-  assert.equal(moved.parentId, undefined);
-  assert.equal(moved.position, 2);
-  assert.equal(y.parentId, "p");
-  assert.equal(y.position, 0);
-  assert.equal(unrelated.parentId, "independent");
-  assert.equal(unrelated.position, 7);
+  assert.equal(findTask(next, "c").position, 0);
+  assert.equal(findTask(next, "a").position, 1);
+  assert.equal(findTask(next, "b").position, 2);
+  assert.equal(findTask(next, "d").position, 3);
 });
 
 test("createTaskRepositionActivity maps move metadata", () => {
@@ -139,6 +103,5 @@ test("createTaskRepositionActivity maps move metadata", () => {
   assert.equal(activity.taskLabel, "C");
   assert.equal(activity.moveBeforeTaskLabel, undefined);
   assert.equal(activity.moveAfterTaskLabel, "A");
-  assert.equal(activity.moveDestinationParentLabel, undefined);
   assert.ok(activity.id.startsWith("task-repositioned-"));
 });
