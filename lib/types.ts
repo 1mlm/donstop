@@ -54,6 +54,12 @@ export type HistoryActivityKind =
   | "settings_cursor_disabled"
   | "settings_primary_color_changed";
 
+export type ActivityNote = {
+  id: string;
+  text: string;
+  createdAt: string;
+};
+
 export type HistoryActivityItem = {
   id: string;
   kind: HistoryActivityKind;
@@ -73,4 +79,5 @@ export type HistoryActivityItem = {
   subjectLabel?: string;
   oldValue?: string;
   newValue?: string;
+  notes?: ActivityNote[];
 };

@@ -51,6 +51,12 @@ const taskHistoryEntrySchema = z.object({
   calendarDeletedAt: z.string().optional(),
 });
 
+const activityNoteSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  createdAt: z.string(),
+});
+
 const historyActivityItemSchema = z.object({
   id: z.string(),
   kind: z.enum([
@@ -92,6 +98,7 @@ const historyActivityItemSchema = z.object({
   subjectLabel: z.string().optional(),
   oldValue: z.string().optional(),
   newValue: z.string().optional(),
+  notes: z.array(activityNoteSchema).optional(),
 });
 
 const persistedTodoStateSchema = z.object({

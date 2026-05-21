@@ -58,6 +58,9 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   resetAllData: () => void;
   wipeAllData: () => void;
   clearHistory: () => void;
+  clearHistoryRange: (startISO?: string, endISO?: string) => void;
+  addActivityNote: (activityId: string, text: string) => void;
+  deleteActivityNote: (activityId: string, noteId: string) => void;
   markHistoryEntrySynced: (
     historyEntryID: string,
     calendarEventId: string,
@@ -513,6 +516,61 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
             activity: [],
           }));
           malikDebug("\u2B1C", "store history cleared");
+        },
+        clearHistoryRange(startISO, endISO) {
+          set((state) => {
+            const start = startISO ? new Date(startISO).getTime() : 0;
+            const end = endISO ? new Date(endISO).getTime() : Date.now();
+            const keepActivity = state.activity.filter((item) => {
+              const t = new Date(item.createdAt).getTime();
+              return t < start || t > end;
+            });
+            const removedEntryIDs = new Set(
+              state.activity
+                .filter((item) => {
+                  const t = new Date(item.createdAt).getTime();
+                  return t >= start && t <= end;
+                })
+                .map((item) => item.taskHistoryEntryID),
+            );
+            const keepHistory = state.history.filter(
+              (entry) => !removedEntryIDs.has(entry.id),
+            );
+            return { ...state, activity: keepActivity, history: keepHistory };
+          });
+        },
+        addActivityNote(activityId, text) {
+          set((state) => ({
+            ...state,
+            activity: state.activity.map((item) =>
+              item.id === activityId
+                ? {
+                    ...item,
+                    notes: [
+                      ...(item.notes ?? []),
+                      {
+                        id: generateRandomID(),
+                        text: text.trim(),
+                        createdAt: new Date().toISOString(),
+                      },
+                    ],
+                  }
+                : item,
+            ),
+          }));
+        },
+        deleteActivityNote(activityId, noteId) {
+          set((state) => ({
+            ...state,
+            activity: state.activity.map((item) =>
+              item.id === activityId
+                ? {
+                    ...item,
+                    notes: (item.notes ?? []).filter((n) => n.id !== noteId),
+                  }
+                : item,
+            ),
+          }));
         },
         markHistoryEntrySynced(
           historyEntryID,
