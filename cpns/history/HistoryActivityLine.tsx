@@ -32,12 +32,6 @@ import type {
 } from "@/lib/types";
 import { formatDateTime } from "@/lib/util";
 import { Button } from "@/shadcn/ui/button";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/shadcn/ui/context-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
@@ -340,350 +334,306 @@ export function HistoryActivityLine({
         open={addNoteOpen}
         onOpenChange={setAddNoteOpen}
       />
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div
-            className={`group flex items-center justify-between gap-2 rounded py-0.5 transition-colors ${
-              isSelected ? "bg-primary/8" : ""
+      <div
+        className={`group flex items-center justify-between gap-2 rounded py-0.5 transition-colors ${
+          isSelected ? "bg-primary/8" : ""
+        }`}
+      >
+        {configMode ? (
+          <button
+            type="button"
+            aria-label={isSelected ? "Deselect" : "Select"}
+            onClick={onToggleSelect}
+            className={`shrink-0 size-4 rounded-full border-2 transition-all flex items-center justify-center ${
+              selectionMode
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100"
+            } ${
+              isSelected
+                ? "border-primary bg-primary"
+                : "border-muted-foreground/40 bg-transparent"
             }`}
           >
-            {configMode ? (
-              <button
-                type="button"
-                aria-label={isSelected ? "Deselect" : "Select"}
-                onClick={onToggleSelect}
-                className={`shrink-0 size-4 rounded-full border-2 transition-all flex items-center justify-center ${
-                  selectionMode
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100"
-                } ${
-                  isSelected
-                    ? "border-primary bg-primary"
-                    : "border-muted-foreground/40 bg-transparent"
-                }`}
-              >
-                {isSelected ? (
-                  <span className="block size-1.5 rounded-full bg-white" />
-                ) : null}
-              </button>
+            {isSelected ? (
+              <span className="block size-1.5 rounded-full bg-white" />
             ) : null}
+          </button>
+        ) : null}
 
-            <div className="min-w-0 flex-1 text-xs text-foreground">
-              <RelativeTimestamp
-                isoString={item.createdAt}
-                className="text-muted-foreground"
-                nowMs={nowMs}
-              />{" "}
-              {item.kind === "task_started" ? (
-                <>
-                  <Icon icon={Play} className="mx-1 inline size-3.5" />
-                  <span>Started </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                </>
-              ) : item.kind === "task_created" ? (
-                <>
-                  <Icon icon={Add01Icon} className="mx-1 inline size-3.5" />
-                  <span>Created </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                </>
-              ) : item.kind === "task_transferred" ? (
-                <>
-                  <Icon
-                    icon={ArrowDataTransferDiagonalIcon}
-                    className="mx-1 inline size-3.5"
-                  />
-                  <span>Transferred </span>
-                  <ActivityBadge>
-                    {item.sourceTaskLabel || "Unknown"}
-                  </ActivityBadge>
-                  <span> to </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                </>
-              ) : item.kind === "task_repositioned" ? (
-                <TaskRepositionedActivity item={item} />
-              ) : item.kind === "task_session" ? (
-                <>
-                  <Icon icon={StopIcon} className="mx-1 inline size-3.5" />
-                  <span>Stopped </span>
-                  {hasTaskBeenDeleted ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none">
-                          <Icon icon={Delete02Icon} className="size-3.5" />
-                          {sourceTaskHistory?.taskLabel || item.taskLabel}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Task was deleted after this session was recorded.
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : hasTaskBeenRenamed ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none">
-                          <Icon icon={Edit02Icon} className="size-3.5" />
-                          {sourceTaskHistory?.taskLabel || item.taskLabel}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Task name was later edited from{" "}
-                        {sourceTaskHistory?.taskLabel} to {currentTask?.label}.
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <ActivityBadge>
-                      {sourceTaskHistory?.taskLabel || item.taskLabel}
-                    </ActivityBadge>
-                  )}
-                  {typeof durationSeconds === "number" ? (
-                    <span>
-                      {" "}
-                      after {formatRelativeDuration(durationSeconds)}
-                    </span>
-                  ) : null}
-                </>
-              ) : item.kind === "task_finished" ? (
-                <>
-                  <Icon icon={PartyIcon} className="mx-1 inline size-3.5" />
-                  <span>Finished </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                  {typeof item.durationSeconds === "number" ? (
-                    <span>
-                      {" "}
-                      in {formatRelativeDuration(item.durationSeconds)}
-                    </span>
-                  ) : null}
-                </>
-              ) : item.kind === "task_restored" ? (
-                <>
-                  <Icon icon={UndoIcon} className="mx-1 inline size-3.5" />
-                  <span>Restored </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                </>
-              ) : item.kind === "task_cancelled" ? (
-                <>
-                  <Icon icon={Undo03Icon} className="mx-1 inline size-3.5" />
-                  <span>Cancelled </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                  {typeof item.durationSeconds === "number" ? (
-                    <span>
-                      {" "}
-                      after {formatRelativeDuration(item.durationSeconds)}
-                    </span>
-                  ) : null}
-                </>
-              ) : item.kind === "task_renamed" ? (
-                <>
-                  <Icon icon={Edit02Icon} className="mx-1 inline size-3.5" />
-                  <span>Renamed </span>
-                  <ActivityBadge>
-                    {item.oldLabel || item.taskLabel}
-                  </ActivityBadge>
-                  <span> to </span>
-                  <ActivityBadge>
-                    {item.newLabel || item.taskLabel}
-                  </ActivityBadge>
-                </>
-              ) : item.kind === "task_deleted" ? (
-                <>
-                  <Icon icon={Delete02Icon} className="mx-1 inline size-3.5" />
-                  <span>Deleted </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                </>
-              ) : item.kind === "task_copied" ? (
-                <>
-                  <Icon icon={Copy01Icon} className="mx-1 inline size-3.5" />
-                  <span>Copied </span>
-                  <ActivityBadge>
-                    {item.copyTarget === "id" ? "ID" : "Name"}
-                  </ActivityBadge>
-                  <span> from </span>
-                  <ActivityBadge>{item.taskLabel}</ActivityBadge>
-                </>
-              ) : item.kind === "calendar_connected" ? (
-                <>
-                  <Icon icon={CloudIcon} className="mx-1 inline size-3.5" />
-                  <span>Connected Google Calendar</span>
-                  {item.subjectLabel ? (
-                    <>
-                      <span> as </span>
-                      <ActivityBadge>{item.subjectLabel}</ActivityBadge>
-                    </>
-                  ) : null}
-                </>
-              ) : item.kind === "calendar_disconnected" ? (
-                <>
-                  <Icon icon={Logout02Icon} className="mx-1 inline size-3.5" />
-                  <span>Disconnected Google Calendar</span>
-                </>
-              ) : item.kind === "calendar_enabled" ? (
-                <>
-                  <Icon
-                    icon={CalendarSetting01Icon}
-                    className="mx-1 inline size-3.5"
-                  />
-                  <span>Enabled calendar sync</span>
-                  {item.subjectLabel ? (
-                    <>
-                      <span> for </span>
-                      <ActivityBadge>{item.subjectLabel}</ActivityBadge>
-                    </>
-                  ) : null}
-                </>
-              ) : item.kind === "calendar_disabled" ? (
-                <>
-                  <Icon
-                    icon={CalendarRemove01Icon}
-                    className="mx-1 inline size-3.5"
-                  />
-                  <span>Disabled calendar sync</span>
-                  {item.subjectLabel ? (
-                    <>
-                      <span> for </span>
-                      <ActivityBadge>{item.subjectLabel}</ActivityBadge>
-                    </>
-                  ) : null}
-                </>
-              ) : item.kind === "calendar_target_changed" ? (
-                <>
-                  <Icon
-                    icon={ArrowRight01Icon}
-                    className="mx-1 inline size-3.5"
-                  />
-                  <span>Changed target calendar</span>
-                  {item.oldValue ? (
-                    <>
-                      <span> from </span>
-                      <ActivityBadge>{item.oldValue}</ActivityBadge>
-                    </>
-                  ) : null}
-                  {item.newValue ? (
-                    <>
-                      <span> to </span>
-                      <ActivityBadge>{item.newValue}</ActivityBadge>
-                    </>
-                  ) : null}
-                </>
-              ) : item.kind === "settings_cursor_enabled" ? (
-                <>
-                  <Icon
-                    icon={CursorMagicSelection04Icon}
-                    className="mx-1 inline size-3.5"
-                  />
-                  <span>Enabled custom cursor</span>
-                </>
-              ) : item.kind === "settings_cursor_disabled" ? (
-                <>
-                  <Icon
-                    icon={UnavailableIcon}
-                    className="mx-1 inline size-3.5"
-                  />
-                  <span>Disabled custom cursor</span>
-                </>
-              ) : item.kind === "settings_primary_color_changed" ? (
-                <>
-                  <Icon
-                    icon={PaintBrush04Icon}
-                    className="mx-1 inline size-3.5"
-                  />
-                  <span>Changed primary color</span>
-                  {item.oldValue ? (
-                    <>
-                      <span> from </span>
-                      <ActivityBadge>{item.oldValue}</ActivityBadge>
-                    </>
-                  ) : null}
-                  {item.newValue ? (
-                    <>
-                      <span> to </span>
-                      <ActivityBadge>{item.newValue}</ActivityBadge>
-                    </>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1">
-              {syncIcon && (syncStatus === "synced" || syncTooltipText) ? (
+        <div className="min-w-0 flex-1 text-xs text-foreground">
+          <RelativeTimestamp
+            isoString={item.createdAt}
+            className="text-muted-foreground"
+            nowMs={nowMs}
+          />{" "}
+          {item.kind === "task_started" ? (
+            <>
+              <Icon icon={Play} className="mx-1 inline size-3.5" />
+              <span>Started </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+            </>
+          ) : item.kind === "task_created" ? (
+            <>
+              <Icon icon={Add01Icon} className="mx-1 inline size-3.5" />
+              <span>Created </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+            </>
+          ) : item.kind === "task_transferred" ? (
+            <>
+              <Icon
+                icon={ArrowDataTransferDiagonalIcon}
+                className="mx-1 inline size-3.5"
+              />
+              <span>Transferred </span>
+              <ActivityBadge>{item.sourceTaskLabel || "Unknown"}</ActivityBadge>
+              <span> to </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+            </>
+          ) : item.kind === "task_repositioned" ? (
+            <TaskRepositionedActivity item={item} />
+          ) : item.kind === "task_session" ? (
+            <>
+              <Icon icon={StopIcon} className="mx-1 inline size-3.5" />
+              <span>Stopped </span>
+              {hasTaskBeenDeleted ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex text-muted-foreground">
-                      <Icon icon={syncIcon} className="size-3.5" />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none">
+                      <Icon icon={Delete02Icon} className="size-3.5" />
+                      {sourceTaskHistory?.taskLabel || item.taskLabel}
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {syncStatus === "synced" ? (
-                      syncDelaySeconds !== null && syncDelaySeconds > 10 ? (
-                        <span>
-                          Synchronized with Google Calendar{" "}
-                          <span className="underline decoration-dotted">
-                            {formatRelativeDuration(syncDelaySeconds)} after
-                          </span>
-                        </span>
-                      ) : (
-                        <span>
-                          Immediately synchronized with Google Calendar
-                        </span>
-                      )
-                    ) : (
-                      <span>{syncTooltipText}</span>
-                    )}
+                    Task was deleted after this session was recorded.
                   </TooltipContent>
                 </Tooltip>
-              ) : item.kind === "task_transferred" &&
-                typeof item.durationSeconds === "number" ? (
-                <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none text-muted-foreground">
-                  {formatRelativeDuration(item.durationSeconds)}
+              ) : hasTaskBeenRenamed ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none">
+                      <Icon icon={Edit02Icon} className="size-3.5" />
+                      {sourceTaskHistory?.taskLabel || item.taskLabel}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Task name was later edited from{" "}
+                    {sourceTaskHistory?.taskLabel} to {currentTask?.label}.
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <ActivityBadge>
+                  {sourceTaskHistory?.taskLabel || item.taskLabel}
+                </ActivityBadge>
+              )}
+              {typeof durationSeconds === "number" ? (
+                <span> after {formatRelativeDuration(durationSeconds)}</span>
+              ) : null}
+            </>
+          ) : item.kind === "task_finished" ? (
+            <>
+              <Icon icon={PartyIcon} className="mx-1 inline size-3.5" />
+              <span>Finished </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+              {typeof item.durationSeconds === "number" ? (
+                <span> in {formatRelativeDuration(item.durationSeconds)}</span>
+              ) : null}
+            </>
+          ) : item.kind === "task_restored" ? (
+            <>
+              <Icon icon={UndoIcon} className="mx-1 inline size-3.5" />
+              <span>Restored </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+            </>
+          ) : item.kind === "task_cancelled" ? (
+            <>
+              <Icon icon={Undo03Icon} className="mx-1 inline size-3.5" />
+              <span>Cancelled </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+              {typeof item.durationSeconds === "number" ? (
+                <span>
+                  {" "}
+                  after {formatRelativeDuration(item.durationSeconds)}
                 </span>
               ) : null}
-
-              <NotesBadge
-                notes={notes}
-                activityId={item.id}
-                onAddNote={() => setAddNoteOpen(true)}
-              />
-
-              {configMode ? (
+            </>
+          ) : item.kind === "task_renamed" ? (
+            <>
+              <Icon icon={Edit02Icon} className="mx-1 inline size-3.5" />
+              <span>Renamed </span>
+              <ActivityBadge>{item.oldLabel || item.taskLabel}</ActivityBadge>
+              <span> to </span>
+              <ActivityBadge>{item.newLabel || item.taskLabel}</ActivityBadge>
+            </>
+          ) : item.kind === "task_deleted" ? (
+            <>
+              <Icon icon={Delete02Icon} className="mx-1 inline size-3.5" />
+              <span>Deleted </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+            </>
+          ) : item.kind === "task_copied" ? (
+            <>
+              <Icon icon={Copy01Icon} className="mx-1 inline size-3.5" />
+              <span>Copied </span>
+              <ActivityBadge>
+                {item.copyTarget === "id" ? "ID" : "Name"}
+              </ActivityBadge>
+              <span> from </span>
+              <ActivityBadge>{item.taskLabel}</ActivityBadge>
+            </>
+          ) : item.kind === "calendar_connected" ? (
+            <>
+              <Icon icon={CloudIcon} className="mx-1 inline size-3.5" />
+              <span>Connected Google Calendar</span>
+              {item.subjectLabel ? (
                 <>
-                  <button
-                    type="button"
-                    aria-label="Add note"
-                    onClick={() => setAddNoteOpen(true)}
-                    className={`text-muted-foreground/60 hover:text-foreground transition-opacity ${
-                      selectionMode
-                        ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    <Icon icon={MessageAdd01Icon} className="size-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Delete log"
-                    onClick={onDelete}
-                    className={`text-muted-foreground/60 hover:text-destructive transition-opacity ${
-                      selectionMode
-                        ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100"
-                    }`}
-                  >
-                    <Icon icon={Delete02Icon} className="size-3.5" />
-                  </button>
+                  <span> as </span>
+                  <ActivityBadge>{item.subjectLabel}</ActivityBadge>
                 </>
               ) : null}
-            </div>
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem
-            onClick={() => setAddNoteOpen(true)}
-            className="gap-2 text-xs"
-          >
-            <Icon icon={MessageAdd01Icon} className="size-3.5" />
-            Add note
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+            </>
+          ) : item.kind === "calendar_disconnected" ? (
+            <>
+              <Icon icon={Logout02Icon} className="mx-1 inline size-3.5" />
+              <span>Disconnected Google Calendar</span>
+            </>
+          ) : item.kind === "calendar_enabled" ? (
+            <>
+              <Icon
+                icon={CalendarSetting01Icon}
+                className="mx-1 inline size-3.5"
+              />
+              <span>Enabled calendar sync</span>
+              {item.subjectLabel ? (
+                <>
+                  <span> for </span>
+                  <ActivityBadge>{item.subjectLabel}</ActivityBadge>
+                </>
+              ) : null}
+            </>
+          ) : item.kind === "calendar_disabled" ? (
+            <>
+              <Icon
+                icon={CalendarRemove01Icon}
+                className="mx-1 inline size-3.5"
+              />
+              <span>Disabled calendar sync</span>
+              {item.subjectLabel ? (
+                <>
+                  <span> for </span>
+                  <ActivityBadge>{item.subjectLabel}</ActivityBadge>
+                </>
+              ) : null}
+            </>
+          ) : item.kind === "calendar_target_changed" ? (
+            <>
+              <Icon icon={ArrowRight01Icon} className="mx-1 inline size-3.5" />
+              <span>Changed target calendar</span>
+              {item.oldValue ? (
+                <>
+                  <span> from </span>
+                  <ActivityBadge>{item.oldValue}</ActivityBadge>
+                </>
+              ) : null}
+              {item.newValue ? (
+                <>
+                  <span> to </span>
+                  <ActivityBadge>{item.newValue}</ActivityBadge>
+                </>
+              ) : null}
+            </>
+          ) : item.kind === "settings_cursor_enabled" ? (
+            <>
+              <Icon
+                icon={CursorMagicSelection04Icon}
+                className="mx-1 inline size-3.5"
+              />
+              <span>Enabled custom cursor</span>
+            </>
+          ) : item.kind === "settings_cursor_disabled" ? (
+            <>
+              <Icon icon={UnavailableIcon} className="mx-1 inline size-3.5" />
+              <span>Disabled custom cursor</span>
+            </>
+          ) : item.kind === "settings_primary_color_changed" ? (
+            <>
+              <Icon icon={PaintBrush04Icon} className="mx-1 inline size-3.5" />
+              <span>Changed primary color</span>
+              {item.oldValue ? (
+                <>
+                  <span> from </span>
+                  <ActivityBadge>{item.oldValue}</ActivityBadge>
+                </>
+              ) : null}
+              {item.newValue ? (
+                <>
+                  <span> to </span>
+                  <ActivityBadge>{item.newValue}</ActivityBadge>
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          {syncIcon && (syncStatus === "synced" || syncTooltipText) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex text-muted-foreground">
+                  <Icon icon={syncIcon} className="size-3.5" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {syncStatus === "synced" ? (
+                  syncDelaySeconds !== null && syncDelaySeconds > 10 ? (
+                    <span>
+                      Synchronized with Google Calendar{" "}
+                      <span className="underline decoration-dotted">
+                        {formatRelativeDuration(syncDelaySeconds)} after
+                      </span>
+                    </span>
+                  ) : (
+                    <span>Immediately synchronized with Google Calendar</span>
+                  )
+                ) : (
+                  <span>{syncTooltipText}</span>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          ) : item.kind === "task_transferred" &&
+            typeof item.durationSeconds === "number" ? (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none text-muted-foreground">
+              {formatRelativeDuration(item.durationSeconds)}
+            </span>
+          ) : null}
+
+          <NotesBadge
+            notes={notes}
+            activityId={item.id}
+            onAddNote={() => setAddNoteOpen(true)}
+          />
+
+          {configMode ? (
+            <>
+              <button
+                type="button"
+                aria-label="Add note"
+                onClick={() => setAddNoteOpen(true)}
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-foreground transition-opacity"
+              >
+                <Icon icon={MessageAdd01Icon} className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Delete log"
+                onClick={onDelete}
+                className="opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-destructive transition-opacity"
+              >
+                <Icon icon={Delete02Icon} className="size-3.5" />
+              </button>
+            </>
+          ) : null}
+        </div>
+      </div>
     </>
   );
 }

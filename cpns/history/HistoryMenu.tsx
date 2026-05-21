@@ -3,13 +3,18 @@
 import {
   ArrowDown01Icon,
   Delete02Icon,
+  FilterIcon,
   MinusSignIcon,
   NewsIcon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTODOStore } from "@/lib/store";
-import type { HistoryActivityItem, TaskHistoryEntry } from "@/lib/types";
+import type {
+  HistoryActivityItem,
+  HistoryActivityKind,
+  TaskHistoryEntry,
+} from "@/lib/types";
 import { Button } from "@/shadcn/ui/button";
 import {
   DropdownMenu,
@@ -139,10 +144,159 @@ function ClearRangePopover({
   );
 }
 
+const KIND_LABELS: Partial<Record<HistoryActivityKind, string>> = {
+  task_created: "Created",
+  task_started: "Started",
+  task_session: "Stopped",
+  task_finished: "Finished",
+  task_cancelled: "Cancelled",
+  task_restored: "Restored",
+  task_deleted: "Deleted",
+  task_renamed: "Renamed",
+  task_repositioned: "Repositioned",
+  task_transferred: "Transferred",
+  task_copied: "Copied",
+  calendar_connected: "Calendar connected",
+  calendar_disconnected: "Calendar disconnected",
+  calendar_enabled: "Calendar enabled",
+  calendar_disabled: "Calendar disabled",
+  calendar_target_changed: "Calendar target changed",
+  settings_cursor_enabled: "Cursor enabled",
+  settings_cursor_disabled: "Cursor disabled",
+  settings_primary_color_changed: "Color changed",
+};
+
+function FilterPopover({
+  allItems,
+  filterTask,
+  filterKinds,
+  onFilterTaskChange,
+  onFilterKindsChange,
+}: {
+  allItems: HistoryActivityItem[];
+  filterTask: string | null;
+  filterKinds: Set<HistoryActivityKind>;
+  onFilterTaskChange: (task: string | null) => void;
+  onFilterKindsChange: (kinds: Set<HistoryActivityKind>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const uniqueTasks = Array.from(
+    new Set(allItems.map((i) => i.taskLabel).filter(Boolean)),
+  ).sort();
+
+  const presentKinds = Array.from(new Set(allItems.map((i) => i.kind))).filter(
+    (k) => k in KIND_LABELS,
+  ) as HistoryActivityKind[];
+
+  const activeCount = (filterTask ? 1 : 0) + (filterKinds.size > 0 ? 1 : 0);
+
+  function toggleKind(kind: HistoryActivityKind) {
+    const next = new Set(filterKinds);
+    if (next.has(kind)) next.delete(kind);
+    else next.add(kind);
+    onFilterKindsChange(next);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Filter logs"
+          className={`relative flex size-7 items-center justify-center rounded-full border transition-colors ${
+            activeCount > 0
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Icon icon={FilterIcon} className="size-3.5" />
+          {activeCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground ring-1 ring-background">
+              {activeCount}
+            </span>
+          ) : null}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium">Filters</p>
+          {activeCount > 0 ? (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                onFilterTaskChange(null);
+                onFilterKindsChange(new Set());
+              }}
+            >
+              Clear all
+            </button>
+          ) : null}
+        </div>
+
+        {uniqueTasks.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Task
+            </p>
+            <div className="max-h-28 overflow-auto space-y-0.5">
+              {uniqueTasks.map((task) => (
+                <button
+                  key={task}
+                  type="button"
+                  onClick={() =>
+                    onFilterTaskChange(filterTask === task ? null : task)
+                  }
+                  className={`w-full rounded px-2 py-1 text-left text-xs transition-colors ${
+                    filterTask === task
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  {task}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {presentKinds.length > 0 ? (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Type
+            </p>
+            <div className="max-h-40 overflow-auto space-y-0.5">
+              {presentKinds.map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => toggleKind(kind)}
+                  className={`w-full rounded px-2 py-1 text-left text-xs transition-colors ${
+                    filterKinds.has(kind)
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  {KIND_LABELS[kind]}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function HistoryMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [configMode, setConfigMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filterTask, setFilterTask] = useState<string | null>(null);
+  const [filterKinds, setFilterKinds] = useState<Set<HistoryActivityKind>>(
+    new Set(),
+  );
 
   const nowMs = useHistoryNowMsEffect();
   const activity = useTODOStore(
@@ -156,7 +310,14 @@ export default function HistoryMenu() {
   );
 
   const allDisplayActivity = buildDisplayActivity(activity, history);
-  const groups = groupActivity(allDisplayActivity, nowMs);
+
+  const filteredActivity = allDisplayActivity.filter((item) => {
+    if (filterTask && item.taskLabel !== filterTask) return false;
+    if (filterKinds.size > 0 && !filterKinds.has(item.kind)) return false;
+    return true;
+  });
+
+  const groups = groupActivity(filteredActivity, nowMs);
 
   const historyByID = new Map<string, TaskHistoryEntry>(
     history.map((entry: TaskHistoryEntry) => [entry.id, entry]),
@@ -166,7 +327,7 @@ export default function HistoryMenu() {
 
   const isEmpty = allDisplayActivity.length === 0;
   const selectionMode = selectedIds.size > 0;
-  const allIds = allDisplayActivity.map((i) => i.id);
+  const allIds = filteredActivity.map((i) => i.id);
   const allSelected =
     allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
 
@@ -272,7 +433,9 @@ export default function HistoryMenu() {
           <div className="flex items-center justify-between border-b px-3 py-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">
-                {allDisplayActivity.length} total logs
+                {filteredActivity.length < allDisplayActivity.length
+                  ? `${filteredActivity.length} of ${allDisplayActivity.length} logs`
+                  : `${allDisplayActivity.length} total logs`}
               </span>
               {selectionMode ? (
                 <span className="text-xs text-muted-foreground">
@@ -281,6 +444,13 @@ export default function HistoryMenu() {
               ) : null}
             </div>
             <div className="flex items-center gap-1.5">
+              <FilterPopover
+                allItems={allDisplayActivity}
+                filterTask={filterTask}
+                filterKinds={filterKinds}
+                onFilterTaskChange={setFilterTask}
+                onFilterKindsChange={setFilterKinds}
+              />
               {configMode && selectionMode ? (
                 <Button
                   variant="outline"
