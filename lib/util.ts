@@ -1,3 +1,5 @@
+import { getTimezone } from "./timezone";
+
 // Returns a human-friendly relative time string (e.g. '2 minutes ago')
 export function formatRelativeTime(dateString: string): string {
   const date = new Date(dateString);
@@ -98,6 +100,7 @@ export function formatDateTime(isoString: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: getTimezone(),
   }).format(date);
 }
 

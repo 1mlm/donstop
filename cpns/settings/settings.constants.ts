@@ -1,5 +1,6 @@
 export const CURSOR_ENABLED_KEY = "todo-app-cursor-enabled";
 export const PRIMARY_COLOR_KEY = "todo-app-primary-color";
+export const THEME_KEY = "todo-app-theme";
 export const SETTINGS_RESET_EVENT = "todo-app-settings-reset";
 export const DEFAULT_PRIMARY_COLOR = "#3b82f6";
 
@@ -26,6 +27,7 @@ export const TAILWIND_500_COLORS = [
   { name: "Fuchsia", value: "#d946ef" },
   { name: "Pink", value: "#ec4899" },
   { name: "Rose", value: "#f43f5e" },
+  { name: "White", value: "#ffffff" },
 ] as const;
 
 export type PaletteColor = (typeof TAILWIND_500_COLORS)[number];

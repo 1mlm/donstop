@@ -4,27 +4,35 @@ import {
   SETTINGS_RESET_EVENT,
 } from "./settings.constants";
 import {
+  type AppTheme,
   applyCursorEnabled,
   applyPrimaryColor,
+  applyTheme,
   readStoredCursorEnabled,
   readStoredPrimaryColor,
+  readStoredTheme,
 } from "./settings.utils";
 
 export function useSettingsBootEffect({
   setCursorEnabled,
   setPrimaryColor,
+  setTheme,
 }: {
   setCursorEnabled: (enabled: boolean) => void;
   setPrimaryColor: (color: string) => void;
+  setTheme: (theme: AppTheme) => void;
 }) {
   useEffect(() => {
     const enabled = readStoredCursorEnabled();
     const primaryColor = readStoredPrimaryColor();
+    const theme = readStoredTheme();
 
     setCursorEnabled(enabled);
     setPrimaryColor(primaryColor);
+    setTheme(theme);
     applyCursorEnabled(enabled);
     applyPrimaryColor(primaryColor);
+    applyTheme(theme);
 
     const onSettingsReset = () => {
       setCursorEnabled(true);
@@ -38,7 +46,7 @@ export function useSettingsBootEffect({
     return () => {
       window.removeEventListener(SETTINGS_RESET_EVENT, onSettingsReset);
     };
-  }, [setCursorEnabled, setPrimaryColor]);
+  }, [setCursorEnabled, setPrimaryColor, setTheme]);
 }
 
 export function useCursorEnabledEffect(cursorEnabled: boolean) {
