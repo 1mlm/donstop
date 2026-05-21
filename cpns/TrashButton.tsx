@@ -16,73 +16,75 @@ export default function TrashButton() {
   const restoreDeletedTask = useTODOStore((s) => s.restoreDeletedTask);
   const clearTrash = useTODOStore((s) => s.clearTrash);
   const hasDeleted = deletedTasks.length > 0;
-  const cleanTrash = clearTrash;
+
+  if (!hasDeleted) {
+    return (
+      <span className="inline-flex cursor-not-allowed-custom">
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-full squircle squircle-full px-3 opacity-50 hover:bg-transparent"
+          aria-label="Empty Trash"
+          disabled
+        >
+          <Icon icon={Delete01Icon} />
+          Empty Trash
+        </Button>
+      </span>
+    );
+  }
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <span
-          className={
-            hasDeleted
-              ? "inline-flex cursor-pointer-custom"
-              : "inline-flex cursor-not-allowed-custom"
-          }
-        >
+        <span className="inline-flex cursor-pointer-custom">
           <Button
             variant="outline"
             size="sm"
             className="rounded-full squircle squircle-full px-3"
             aria-label="Trash"
-            disabled={!hasDeleted}
           >
             <Icon icon={Delete01Icon} />
-            {hasDeleted ? "Trash" : "Empty Trash"}
+            Trash
           </Button>
         </span>
       </PopoverTrigger>
-      <PopoverContent className="max-w-md w-80">
+      <PopoverContent className="w-80 max-w-md">
         <PopoverHeader>
           <PopoverTitle>Deleted Tasks</PopoverTitle>
         </PopoverHeader>
-        {hasDeleted ? (
-          <>
-            <Button
-              size="sm"
-              variant="destructive"
-              className="mb-2 w-full"
-              onClick={cleanTrash}
+        <Button
+          size="sm"
+          variant="destructive"
+          className="mb-2 w-full"
+          onClick={clearTrash}
+        >
+          Clean Trash
+        </Button>
+        <ul className="max-h-80 space-y-2 overflow-y-auto">
+          {deletedTasks.map((task) => (
+            <li
+              key={task.id}
+              className="flex items-center justify-between gap-2 border-b pb-2 last:border-b-0"
             >
-              Clean Trash
-            </Button>
-            <ul className="space-y-2 max-h-80 overflow-y-auto">
-              {deletedTasks.map((task) => (
-                <li
-                  key={task.id}
-                  className="flex items-center justify-between gap-2 border-b pb-2 last:border-b-0"
-                >
-                  <div className="flex flex-col min-w-0">
-                    <span className="truncate max-w-xs">{task.label}</span>
-                    {task.deletedAt && (
-                      <span className="text-xs text-muted-foreground">
-                        Deleted {formatRelativeTime(task.deletedAt)}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    size="xs"
-                    variant="secondary"
-                    onClick={() => restoreDeletedTask(task.id)}
-                  >
-                    Restore
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <div className="text-muted-foreground py-4 text-center">
-            No deleted tasks.
-          </div>
-        )}
+              <div className="flex min-w-0 flex-col">
+                <span className="max-w-xs truncate">{task.label}</span>
+                {task.deletedAt && (
+                  <span className="text-xs text-muted-foreground">
+                    Deleted {formatRelativeTime(task.deletedAt)}
+                  </span>
+                )}
+              </div>
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={() => restoreDeletedTask(task.id)}
+              >
+                Restore
+              </Button>
+            </li>
+          ))}
+        </ul>
       </PopoverContent>
     </Popover>
   );
