@@ -8,6 +8,7 @@ export type TaskObj = {
   finishedAt?: string;
   isFavorite?: boolean;
   deletedAt?: string;
+  lastActivatedAt?: string;
 };
 
 export type ActiveTaskSession = {

@@ -204,7 +204,19 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
           const task = get().getTaskFromID(taskID);
           const startedAt = new Date().toISOString();
 
+          const allTasks = get().tasks;
+          const toStamp = new Set<string>([taskID]);
+          let currentParentId = task?.parentId;
+          while (currentParentId) {
+            toStamp.add(currentParentId);
+            const parent = allTasks.find((t) => t.id === currentParentId);
+            currentParentId = parent?.parentId;
+          }
+
           set({
+            tasks: allTasks.map((t) =>
+              toStamp.has(t.id) ? { ...t, lastActivatedAt: startedAt } : t,
+            ),
             activeSession: {
               taskId: taskID,
               startedAt,

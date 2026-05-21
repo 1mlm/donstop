@@ -28,6 +28,7 @@ const taskObjSchema = z.object({
   isFinished: z.boolean().optional(),
   finishedAt: z.string().optional(),
   isFavorite: z.boolean().optional(),
+  lastActivatedAt: z.string().optional(),
 });
 
 const activeTaskSessionSchema = z
@@ -110,6 +111,13 @@ const persistedTodoStateSchema = z.object({
 });
 
 export function sortByPosition(left: TaskObj, right: TaskObj) {
+  const lt = left.lastActivatedAt
+    ? new Date(left.lastActivatedAt).getTime()
+    : 0;
+  const rt = right.lastActivatedAt
+    ? new Date(right.lastActivatedAt).getTime()
+    : 0;
+  if (lt !== rt) return rt - lt;
   return left.position - right.position;
 }
 
