@@ -1,7 +1,7 @@
 # DonStop
 
 <p align="center">
-  <img src="public/icon.png" width="88" alt="DonStop icon" />
+  <img src="public/banner.png" alt="DonStop banner" />
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
 	<a href="https://biomejs.dev/"><img alt="Biome" src="https://img.shields.io/badge/Biome-Lint_%26_Format-60A5FA?logo=biome&logoColor=white"></a>
 </p>
 
-Nested task timer built for ADHD focus. Write tasks fast, track time live, finish when done, optionally sync to Google Calendar. Zero friction to start working.
+Task timer built for ADHD focus. Write tasks fast, tag them, track time live, finish when done, optionally sync to Google Calendar. Zero friction to start working.
 
 ## Demo
 
@@ -31,8 +31,10 @@ Built by me with strong opinions on architecture, file naming, UI, and what "too
 ## Features
 
 **Tasks**
-- Unlimited nesting, inline create/rename/finish/restore/delete/favorite
-- Drag and drop (before, after, inside) with overlay and placeholder rendering
+- Flat task list with tags — create/rename/finish/restore/delete/favorite inline
+- Tags: create with a name + icon from a curated set, filter task list by tag, remove from task
+- Drag and drop (before/after) with overlay and placeholder rendering
+- Date-grouped list headers (Today, Yesterday, N days ago, Never started)
 - Auto-sort by last activated (most recently worked-on task floats to top)
 - Live duration per task and cumulative tracked time
 - Start, stop, finish, cancel, reset, transfer time between tasks
