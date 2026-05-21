@@ -477,7 +477,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
               icon: Edit03Icon,
               label: "Edit",
               onClick: () => {
-                setEditTimeValue(formatDurationInputValue(taskStoredSeconds));
+                setEditTimeValue(
+                  formatDurationInputValue(taskStoredSeconds + runningSeconds),
+                );
                 setTimeEditError(null);
                 setIsTimePopoverOpen(true);
                 closeMenus();
@@ -849,7 +851,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
                     onOpenChange={(nextOpen) => {
                       if (nextOpen) {
                         setEditTimeValue(
-                          formatDurationInputValue(taskStoredSeconds),
+                          formatDurationInputValue(
+                            taskStoredSeconds + runningSeconds,
+                          ),
                         );
                         setTimeEditError(null);
                       }

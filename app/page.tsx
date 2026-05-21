@@ -1,7 +1,7 @@
 "use client";
 import { Note05Icon } from "@hugeicons/core-free-icons";
-import { ActiveTaskIndicator } from "@/components/ActiveTaskIndicator";
-import { CustomProvider } from "@/components/CustomProvider";
+import { ActiveTaskIndicator } from "@/cpns/ActiveTaskIndicator";
+import { CustomProvider } from "@/cpns/CustomProvider";
 import { Icon } from "@/cpns/Icon";
 import MainBar from "@/cpns/MainBar";
 import { AppCredits, AppTopBar, TopControls } from "@/cpns/page";

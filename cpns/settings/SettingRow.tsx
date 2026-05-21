@@ -1,6 +1,5 @@
 import type { HugeIcon } from "@/cpns/Icon";
 import { Icon } from "@/cpns/Icon";
-import { SETTINGS_ROW_CLASS } from "./settings.styles";
 
 export function SettingRow({
   icon,
@@ -12,7 +11,7 @@ export function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className={SETTINGS_ROW_CLASS}>
+    <div className="flex items-center justify-between rounded-md border px-2.5 py-2">
       <div className="flex items-center gap-2">
         <Icon icon={icon} className="size-4 shrink-0 text-muted-foreground" />
         <p className="text-xs font-medium">{title}</p>

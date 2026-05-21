@@ -521,6 +521,11 @@ export default function HistoryMenu() {
 
           {/* Log list */}
           <div className="max-h-[65vh] overflow-auto p-2 max-md:max-h-[calc(100dvh-4rem)]">
+            {filteredActivity.length === 0 && allDisplayActivity.length > 0 && (
+              <p className="py-4 text-center text-xs text-muted-foreground/60 select-none">
+                No logs match this filter.
+              </p>
+            )}
             {groups.today.length > 0 && (
               <>
                 <SectionLabel label="Today" />

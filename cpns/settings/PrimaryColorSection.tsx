@@ -2,7 +2,6 @@ import { PaintBoardIcon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/cpns/Icon";
 import { cn } from "@/shadcn/lib/utils";
 import { type PaletteColor, TAILWIND_500_COLORS } from "./settings.constants";
-import { COLOR_PREVIEW_TEXT_CLASS } from "./settings.styles";
 import { applyPrimaryColor, writeStoredPrimaryColor } from "./settings.utils";
 
 export function PrimaryColorSection({
@@ -30,7 +29,7 @@ export function PrimaryColorSection({
           </p>
           <span
             className={cn(
-              COLOR_PREVIEW_TEXT_CLASS,
+              "mt-1 block break-all font-mono text-[11px] leading-tight",
               "inline-flex gap-1 items-center",
             )}
             style={{ color: primaryColor }}

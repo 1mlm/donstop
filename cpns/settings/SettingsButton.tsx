@@ -38,11 +38,6 @@ import {
   useSettingsBootEffect,
 } from "./settings.effects";
 import {
-  SETTINGS_PANEL_CLASS,
-  SETTINGS_SECTION_STACK_CLASS,
-  SETTINGS_TRIGGER_CLASS,
-} from "./settings.styles";
-import {
   type AppTheme,
   applyTheme,
   readStoredTheme,
@@ -83,7 +78,7 @@ export default function SettingsButton() {
         <Button
           variant="outline"
           size="sm"
-          className={SETTINGS_TRIGGER_CLASS}
+          className="gap-1.5 rounded-full squircle squircle-full px-3"
           aria-label="Settings"
         >
           <Icon icon={Settings01Icon} />
@@ -95,8 +90,8 @@ export default function SettingsButton() {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="end" className={SETTINGS_PANEL_CLASS}>
-        <div className={SETTINGS_SECTION_STACK_CLASS}>
+      <PopoverContent align="end" className="w-80 p-3">
+        <div className="space-y-3">
           <SettingRow
             icon={CursorMagicSelection04Icon}
             title="Toggle custom cursors"
@@ -137,10 +132,11 @@ export default function SettingsButton() {
                     writeStoredTheme(value);
                     applyTheme(value);
                   }}
-                  className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors ${theme === value
+                  className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-xs transition-colors ${
+                    theme === value
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground"
-                    }`}
+                  }`}
                 >
                   <Icon icon={icon} className="size-3.5" />
                   {label}
