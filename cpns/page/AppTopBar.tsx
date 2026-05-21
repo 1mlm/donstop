@@ -46,7 +46,7 @@ function RightControls() {
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-full squircle rounded-r-none! px-3"
+                className="rounded-full squircle squircle-l-full! rounded-r-none! px-3"
               >
                 <Icon icon={PolicyIcon} className="size-4" />
               </Button>
@@ -62,7 +62,7 @@ function RightControls() {
               <Button
                 variant="outline"
                 size="sm"
-                className="rounded-full squircle rounded-l-none! px-3"
+                className="rounded-full squircle rounded-l-none! squircle-r-full! px-3"
               >
                 <Icon icon={LicenseIcon} className="size-4" />
               </Button>
@@ -94,9 +94,7 @@ export function AppCredits({ className }: { className?: string }) {
         className,
       )}
     >
-      <span>Made with</span>
-      <span className="text-sm leading-none">❤️</span>
-      <span>on</span>
+      <span>Made with ❤️ on</span>
 
       <CreditLink href="https://github.com/1mlm/donstop">
         <Icon icon={Github} className="size-4" />

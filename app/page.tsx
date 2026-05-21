@@ -1,5 +1,6 @@
 "use client";
 import { Note05Icon } from "@hugeicons/core-free-icons";
+import { ActiveTaskIndicator } from "@/components/ActiveTaskIndicator";
 import { CustomProvider } from "@/components/CustomProvider";
 import { Icon } from "@/cpns/Icon";
 import MainBar from "@/cpns/MainBar";
@@ -10,6 +11,7 @@ import WelcomeTour from "@/cpns/WelcomeTour";
 export default function HomePage() {
   return (
     <CustomProvider>
+      <ActiveTaskIndicator />
       <WelcomeTour />
       <div className="relative min-h-screen w-full overflow-x-hidden md:h-screen md:overflow-hidden">
         <div className="flex flex-col gap-3 p-3 pb-5 md:hidden">
