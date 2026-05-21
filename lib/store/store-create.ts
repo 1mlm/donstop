@@ -842,7 +842,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
         },
         getRootTaskIDs() {
           return get()
-            .tasks.filter((task) => !task.parentId)
+            .tasks.filter((task) => !task.parentId && !task.isFinished)
             .sort(sortByPosition)
             .map((task) => task.id);
         },
@@ -851,7 +851,7 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
         },
         getTaskChildrenIDs(taskID) {
           return get()
-            .tasks.filter((task) => task.parentId === taskID)
+            .tasks.filter((task) => task.parentId === taskID && !task.isFinished)
             .sort(sortByPosition)
             .map((task) => task.id);
         },

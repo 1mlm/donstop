@@ -91,6 +91,36 @@ export default function TaskBar() {
   const draggingTaskChildrenCount = draggingTaskID
     ? getTaskChildrenIDs(draggingTaskID).length
     : 0;
+  const groupedRootTaskIDs = useMemo(() => {
+    const now = new Date();
+    const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const taskMap = new Map(allTasks.map((t) => [t.id, t]));
+    const ORDER = ["Today", "Yesterday", "2 days ago", "3 days ago", "4 days ago", "5 days ago", "6 days ago", "Last week", "__never__"];
+    const groups = new Map<string, typeof rootTaskIDs>();
+
+    function getGroupKey(lastActivatedAt: string | undefined): string {
+      if (!lastActivatedAt) return "__never__";
+      const d = new Date(lastActivatedAt);
+      const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const diffDays = Math.round((nowMidnight - dMidnight) / 86400000);
+      if (diffDays === 0) return "Today";
+      if (diffDays === 1) return "Yesterday";
+      if (diffDays < 7) return `${diffDays} days ago`;
+      return "Last week";
+    }
+
+    for (const id of rootTaskIDs) {
+      const key = getGroupKey(taskMap.get(id)?.lastActivatedAt);
+      const bucket = groups.get(key) ?? [];
+      bucket.push(id);
+      groups.set(key, bucket);
+    }
+
+    return ORDER
+      .filter((k) => groups.has(k))
+      .map((k) => ({ label: k === "__never__" ? "Never started" : k, ids: groups.get(k) ?? [] }));
+  }, [rootTaskIDs, allTasks]);
+
   const draggingDescendantIDs = useMemo(
     () => getDescendantsOfTask(allTasks, draggingTaskID),
     [allTasks, draggingTaskID],
@@ -322,7 +352,16 @@ export default function TaskBar() {
             </InputGroup>
           </div>
 
-          <TaskList taskIDs={rootTaskIDs} />
+          {groupedRootTaskIDs.length > 1
+            ? groupedRootTaskIDs.map((group) => (
+                <div key={group.label}>
+                  <p className="select-none px-2 pb-1 pt-3 text-xs font-medium uppercase tracking-wider text-muted-foreground/45">
+                    {group.label}
+                  </p>
+                  <TaskList taskIDs={group.ids} />
+                </div>
+              ))
+            : <TaskList taskIDs={rootTaskIDs} />}
           {rootTaskIDs.length === 0 ? (
             <p className="px-2 pt-2 text-xs text-muted-foreground/50 select-none">
               No tasks yet — type above and press Enter.

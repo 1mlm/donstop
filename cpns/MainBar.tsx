@@ -80,25 +80,23 @@ function ActiveTaskState({
           {formatElapsed(activeTaskSummary.runningSeconds)}
         </h1>
       </div>
-      <div key="active-controls" className="mt-6 flex items-center gap-3">
+      <div key="active-controls" className="mt-6 flex items-center gap-4">
         <Button
           variant="outline"
-          size="lg"
+          size="icon"
           onClick={onStop}
           aria-label="Stop task"
-          className="gap-2 rounded-full px-5"
+          className="size-16 rounded-full"
         >
-          <Icon icon={StopIcon} className="size-4" />
-          Stop
+          <Icon icon={StopIcon} className="size-7" />
         </Button>
         <Button
-          size="lg"
+          size="icon"
           onClick={onFinish}
           aria-label="Finish task"
-          className="gap-2 rounded-full px-5"
+          className="size-16 rounded-full"
         >
-          <Icon icon={PartyIcon} className="size-4" />
-          Finish
+          <Icon icon={PartyIcon} className="size-7" />
         </Button>
       </div>
     </motion.div>
