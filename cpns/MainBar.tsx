@@ -1,8 +1,18 @@
-import { ArrowRight01Icon, SleepingIcon } from "@hugeicons/core-free-icons";
+"use client";
+
+import {
+  ArrowRight01Icon,
+  PartyIcon,
+  SleepingIcon,
+  StopIcon,
+} from "@hugeicons/core-free-icons";
 import { AnimatePresence, motion } from "motion/react";
+import { useEffect } from "react";
 import { useActiveTaskSummary } from "@/lib/live-task";
 import { MOTION_PROPS } from "@/lib/motion";
+import { useTODOStore } from "@/lib/store";
 import { formatPreviewTime } from "@/lib/util";
+import { Button } from "@/shadcn/ui/button";
 import { Bar } from "./Bar";
 import { Icon } from "./Icon";
 
@@ -22,8 +32,12 @@ type ActiveTaskSummary = NonNullable<ReturnType<typeof useActiveTaskSummary>>;
 
 function ActiveTaskState({
   activeTaskSummary,
+  onStop,
+  onFinish,
 }: {
   activeTaskSummary: ActiveTaskSummary;
+  onStop: () => void;
+  onFinish: () => void;
 }) {
   return (
     <motion.div
@@ -47,22 +61,45 @@ function ActiveTaskState({
           ))}
         </div>
       ) : null}
-      <h2 key="active-label" className="text-3xl text-muted-foreground">
+      <h2 key="active-label" className="text-2xl font-medium text-foreground">
         {activeTaskSummary.activeTask.label}
       </h2>
       <div
         key="active-time-row"
         className="mt-2 flex items-center justify-center gap-3"
       >
-        <p key="active-stored-time" className="text-sm text-muted-foreground">
-          {formatElapsed(activeTaskSummary.storedSeconds)} +
-        </p>
+        {activeTaskSummary.storedSeconds > 0 ? (
+          <p key="active-stored-time" className="text-sm text-muted-foreground">
+            {formatElapsed(activeTaskSummary.storedSeconds)} +
+          </p>
+        ) : null}
         <h1
           key="active-running-time"
-          className="text-9xl font-bold leading-none"
+          className="text-8xl font-bold leading-none"
         >
           {formatElapsed(activeTaskSummary.runningSeconds)}
         </h1>
+      </div>
+      <div key="active-controls" className="mt-6 flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={onStop}
+          aria-label="Stop task"
+          className="gap-2 rounded-full px-5"
+        >
+          <Icon icon={StopIcon} className="size-4" />
+          Stop
+        </Button>
+        <Button
+          size="lg"
+          onClick={onFinish}
+          aria-label="Finish task"
+          className="gap-2 rounded-full px-5"
+        >
+          <Icon icon={PartyIcon} className="size-4" />
+          Finish
+        </Button>
       </div>
     </motion.div>
   );
@@ -70,12 +107,29 @@ function ActiveTaskState({
 
 export default function MainBar() {
   const activeTaskSummary = useActiveTaskSummary();
+  const stopActiveTask = useTODOStore((s) => s.stopActiveTask);
+  const finishActiveTask = useTODOStore((s) => s.finishActiveTask);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        finishActiveTask();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [finishActiveTask]);
 
   return (
     <Bar className="flex items-center justify-center">
       <AnimatePresence>
         {activeTaskSummary ? (
-          <ActiveTaskState activeTaskSummary={activeTaskSummary} />
+          <ActiveTaskState
+            activeTaskSummary={activeTaskSummary}
+            onStop={stopActiveTask}
+            onFinish={finishActiveTask}
+          />
         ) : (
           <IdleTaskState />
         )}
