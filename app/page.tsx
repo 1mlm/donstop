@@ -1,5 +1,6 @@
 "use client";
 import { Note05Icon } from "@hugeicons/core-free-icons";
+import dynamic from "next/dynamic";
 import { ActiveTaskIndicator } from "@/cpns/ActiveTaskIndicator";
 import { CustomProvider } from "@/cpns/CustomProvider";
 import { Icon } from "@/cpns/Icon";
@@ -8,11 +9,17 @@ import { AppCredits, AppTopBar, TopControls } from "@/cpns/page";
 import { TaskBar } from "@/cpns/task";
 import WelcomeTour from "@/cpns/WelcomeTour";
 
+const DevToolbar =
+  process.env.NODE_ENV === "development"
+    ? dynamic(() => import("@/cpns/dev/DevToolbar"), { ssr: false })
+    : null;
+
 export default function HomePage() {
   return (
     <CustomProvider>
       <ActiveTaskIndicator />
       <WelcomeTour />
+      {DevToolbar && <DevToolbar />}
       <div className="relative min-h-screen w-full overflow-x-hidden md:h-screen md:overflow-hidden">
         <div className="flex flex-col gap-3 p-3 pb-5 md:hidden">
           <div className="rounded-2xl border bg-card/70 p-2">

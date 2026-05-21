@@ -31,10 +31,16 @@ export function ActiveTaskIndicator() {
   });
 
   useEffect(() => {
-    document.title = activeTaskLabel
-      ? `⏱ ${activeTaskLabel} · DonStop`
-      : "DonStop";
-    setFavicon(activeTaskLabel !== null);
+    const isActive = activeTaskLabel !== null;
+    document.title = isActive ? `⏱ ${activeTaskLabel} · DonStop` : "DonStop";
+    setFavicon(isActive);
+    if ("setAppBadge" in navigator) {
+      if (isActive) {
+        navigator.setAppBadge(1).catch(() => {});
+      } else {
+        navigator.clearAppBadge().catch(() => {});
+      }
+    }
   }, [activeTaskLabel]);
 
   return null;

@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: "DonStop",
   description:
     "An addictive web app to help you stop procrastinating and get things done.",
+  manifest: "/manifest.json",
+};
+
+export const viewport = {
+  themeColor: "#09090b",
 };
 
 export default function RootLayout({ children }: PropsWithChildren) {
