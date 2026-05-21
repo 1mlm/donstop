@@ -198,7 +198,7 @@ function NotesBadge({
   );
 }
 
-function AddNotePopover({
+function AddNoteDialog({
   activityId,
   open,
   onOpenChange,
@@ -219,22 +219,25 @@ function AddNotePopover({
     onOpenChange(false);
   }
 
+  if (!open) return null;
+
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <span className="sr-only" />
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-72 p-3 space-y-2"
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          inputRef.current?.focus();
-        }}
-      >
-        <p className="text-xs font-medium">Add note</p>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      onPointerDown={(e) => {
+        if (e.target === e.currentTarget) onOpenChange(false);
+      }}
+    >
+      <div className="absolute inset-0 bg-black/30" />
+      <div className="relative z-10 w-72 rounded-xl border bg-background p-4 shadow-xl space-y-3">
+        <p className="text-sm font-medium">Add note</p>
         <input
-          ref={inputRef}
+          ref={(el) => {
+            (
+              inputRef as React.MutableRefObject<HTMLInputElement | null>
+            ).current = el;
+            if (el) setTimeout(() => el.focus(), 0);
+          }}
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -263,8 +266,8 @@ function AddNotePopover({
             Save
           </Button>
         </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </div>
   );
 }
 
@@ -274,12 +277,22 @@ export function HistoryActivityLine({
   historyByID,
   taskByID,
   syncedAtByEntryID,
+  configMode = false,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+  onDelete,
 }: {
   item: HistoryActivityItem;
   nowMs: number;
   historyByID: Map<string, TaskHistoryEntry>;
   taskByID: Map<string, { id: string; label: string }>;
   syncedAtByEntryID: Map<string, string>;
+  configMode?: boolean;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+  onDelete?: () => void;
 }) {
   const [addNoteOpen, setAddNoteOpen] = useState(false);
   const sourceTaskHistory = historyByID.get(item.taskHistoryEntryID);
@@ -322,15 +335,40 @@ export function HistoryActivityLine({
 
   return (
     <>
-      <AddNotePopover
+      <AddNoteDialog
         activityId={item.id}
         open={addNoteOpen}
         onOpenChange={setAddNoteOpen}
       />
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div className="flex items-center justify-between gap-3 py-0.5 rounded select-none">
-            <div className="min-w-0 text-xs text-foreground">
+          <div
+            className={`group flex items-center justify-between gap-2 rounded py-0.5 transition-colors ${
+              isSelected ? "bg-primary/8" : ""
+            }`}
+          >
+            {configMode ? (
+              <button
+                type="button"
+                aria-label={isSelected ? "Deselect" : "Select"}
+                onClick={onToggleSelect}
+                className={`shrink-0 size-4 rounded-full border-2 transition-all flex items-center justify-center ${
+                  selectionMode
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                } ${
+                  isSelected
+                    ? "border-primary bg-primary"
+                    : "border-muted-foreground/40 bg-transparent"
+                }`}
+              >
+                {isSelected ? (
+                  <span className="block size-1.5 rounded-full bg-white" />
+                ) : null}
+              </button>
+            ) : null}
+
+            <div className="min-w-0 flex-1 text-xs text-foreground">
               <RelativeTimestamp
                 isoString={item.createdAt}
                 className="text-muted-foreground"
@@ -565,11 +603,11 @@ export function HistoryActivityLine({
               ) : null}
             </div>
 
-            {syncIcon && (syncStatus === "synced" || syncTooltipText) ? (
-              <div className="inline-flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+            <div className="flex shrink-0 items-center gap-1">
+              {syncIcon && (syncStatus === "synced" || syncTooltipText) ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className="inline-flex">
+                    <span className="inline-flex text-muted-foreground">
                       <Icon icon={syncIcon} className="size-3.5" />
                     </span>
                   </TooltipTrigger>
@@ -592,18 +630,48 @@ export function HistoryActivityLine({
                     )}
                   </TooltipContent>
                 </Tooltip>
-              </div>
-            ) : item.kind === "task_transferred" &&
-              typeof item.durationSeconds === "number" ? (
-              <div className="inline-flex shrink-0 items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none text-muted-foreground">
-                {formatRelativeDuration(item.durationSeconds)}
-              </div>
-            ) : null}
-            <NotesBadge
-              notes={notes}
-              activityId={item.id}
-              onAddNote={() => setAddNoteOpen(true)}
-            />
+              ) : item.kind === "task_transferred" &&
+                typeof item.durationSeconds === "number" ? (
+                <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none text-muted-foreground">
+                  {formatRelativeDuration(item.durationSeconds)}
+                </span>
+              ) : null}
+
+              <NotesBadge
+                notes={notes}
+                activityId={item.id}
+                onAddNote={() => setAddNoteOpen(true)}
+              />
+
+              {configMode ? (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Add note"
+                    onClick={() => setAddNoteOpen(true)}
+                    className={`text-muted-foreground/60 hover:text-foreground transition-opacity ${
+                      selectionMode
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    <Icon icon={MessageAdd01Icon} className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Delete log"
+                    onClick={onDelete}
+                    className={`text-muted-foreground/60 hover:text-destructive transition-opacity ${
+                      selectionMode
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    <Icon icon={Delete02Icon} className="size-3.5" />
+                  </button>
+                </>
+              ) : null}
+            </div>
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>

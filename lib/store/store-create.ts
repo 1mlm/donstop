@@ -61,6 +61,7 @@ export type TODOStoreState = ReturnType<typeof createDefaultState> & {
   clearHistoryRange: (startISO?: string, endISO?: string) => void;
   addActivityNote: (activityId: string, text: string) => void;
   deleteActivityNote: (activityId: string, noteId: string) => void;
+  deleteActivityItems: (ids: string[]) => void;
   markHistoryEntrySynced: (
     historyEntryID: string,
     calendarEventId: string,
@@ -571,6 +572,33 @@ export const createTODOStoreBase = (tasks: TaskObj[]) =>
                 : item,
             ),
           }));
+        },
+        deleteActivityItems(ids) {
+          const idSet = new Set(ids);
+          set((state) => {
+            const removed = state.activity.filter((item) => idSet.has(item.id));
+            const removedEntryIDs = new Set(
+              removed
+                .map((item) => item.taskHistoryEntryID)
+                .filter((id): id is string => Boolean(id)),
+            );
+            const remainingActivity = state.activity.filter(
+              (item) => !idSet.has(item.id),
+            );
+            const referencedByRemaining = new Set(
+              remainingActivity.map((item) => item.taskHistoryEntryID),
+            );
+            const keepHistory = state.history.filter(
+              (entry) =>
+                !removedEntryIDs.has(entry.id) ||
+                referencedByRemaining.has(entry.id),
+            );
+            return {
+              ...state,
+              activity: remainingActivity,
+              history: keepHistory,
+            };
+          });
         },
         markHistoryEntrySynced(
           historyEntryID,

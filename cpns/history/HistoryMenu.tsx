@@ -3,7 +3,9 @@
 import {
   ArrowDown01Icon,
   Delete02Icon,
+  MinusSignIcon,
   NewsIcon,
+  Settings01Icon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTODOStore } from "@/lib/store";
@@ -30,11 +32,9 @@ import {
 function groupActivity(items: HistoryActivityItem[], nowMs: number) {
   const now = new Date(nowMs);
   const todayISO = now.toISOString();
-
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayISO = yesterday.toISOString();
-
   const weekStart = new Date(now);
   weekStart.setDate(weekStart.getDate() - 7);
 
@@ -60,7 +60,7 @@ function groupActivity(items: HistoryActivityItem[], nowMs: number) {
 
 function SectionLabel({ label }: { label: string }) {
   return (
-    <p className="px-1 pt-2 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+    <p className="px-1 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
       {label}
     </p>
   );
@@ -141,6 +141,9 @@ function ClearRangePopover({
 
 export default function HistoryMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [configMode, setConfigMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   const nowMs = useHistoryNowMsEffect();
   const activity = useTODOStore(
     (state) => state.activity,
@@ -148,6 +151,9 @@ export default function HistoryMenu() {
   const history = useTODOStore((state) => state.history) as TaskHistoryEntry[];
   const tasks = useTODOStore((state) => state.tasks);
   const clearHistoryRange = useTODOStore((state) => state.clearHistoryRange);
+  const deleteActivityItems = useTODOStore(
+    (state) => state.deleteActivityItems,
+  );
 
   const allDisplayActivity = buildDisplayActivity(activity, history);
   const groups = groupActivity(allDisplayActivity, nowMs);
@@ -159,6 +165,40 @@ export default function HistoryMenu() {
   const syncedAtByEntryID = buildSyncedAtByEntryID(activity);
 
   const isEmpty = allDisplayActivity.length === 0;
+  const selectionMode = selectedIds.size > 0;
+  const allIds = allDisplayActivity.map((i) => i.id);
+  const allSelected =
+    allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  }
+
+  function deleteSelected() {
+    deleteActivityItems(Array.from(selectedIds));
+    setSelectedIds(new Set());
+  }
+
+  function exitConfigMode() {
+    setConfigMode(false);
+    setSelectedIds(new Set());
+  }
 
   if (isEmpty) {
     return (
@@ -180,7 +220,7 @@ export default function HistoryMenu() {
   function renderGroup(items: HistoryActivityItem[]) {
     if (items.length === 0) return null;
     return (
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {items.map((item) => (
           <HistoryActivityLine
             key={item.id}
@@ -189,6 +229,11 @@ export default function HistoryMenu() {
             historyByID={historyByID}
             taskByID={taskByID}
             syncedAtByEntryID={syncedAtByEntryID}
+            configMode={configMode}
+            selectionMode={selectionMode}
+            isSelected={selectedIds.has(item.id)}
+            onToggleSelect={() => toggleSelect(item.id)}
+            onDelete={() => deleteActivityItems([item.id])}
           />
         ))}
       </div>
@@ -197,7 +242,13 @@ export default function HistoryMenu() {
 
   return (
     <TooltipProvider>
-      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+      <DropdownMenu
+        open={isMenuOpen}
+        onOpenChange={(v) => {
+          setIsMenuOpen(v);
+          if (!v) exitConfigMode();
+        }}
+      >
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
@@ -208,9 +259,7 @@ export default function HistoryMenu() {
             History
             <Icon
               icon={ArrowDown01Icon}
-              className={`size-4 transition-transform ${
-                isMenuOpen ? "rotate-180" : "rotate-0"
-              }`}
+              className={`size-4 transition-transform ${isMenuOpen ? "rotate-180" : "rotate-0"}`}
             />
           </Button>
         </DropdownMenuTrigger>
@@ -219,17 +268,82 @@ export default function HistoryMenu() {
           side="bottom"
           className="w-[34rem] max-w-[calc(100vw-2rem)] p-0 max-md:fixed max-md:inset-0 max-md:h-dvh max-md:w-screen max-md:max-w-none max-md:rounded-none max-md:border-0 max-md:!left-0 max-md:!top-0 max-md:!transform-none"
         >
+          {/* Header */}
           <div className="flex items-center justify-between border-b px-3 py-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              {allDisplayActivity.length} total logs
-            </span>
-            <ClearRangePopover
-              onClear={(start, end) => {
-                clearHistoryRange(start, end);
-                setIsMenuOpen(false);
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                {allDisplayActivity.length} total logs
+              </span>
+              {selectionMode ? (
+                <span className="text-xs text-muted-foreground">
+                  · {selectedIds.size} selected
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-center gap-1.5">
+              {configMode && selectionMode ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 px-2 text-xs text-destructive hover:text-destructive"
+                  onClick={deleteSelected}
+                >
+                  <Icon icon={Delete02Icon} className="size-3.5" />
+                  Delete {selectedIds.size}
+                </Button>
+              ) : null}
+              {configMode ? (
+                <ClearRangePopover
+                  onClear={(start, end) => {
+                    clearHistoryRange(start, end);
+                    exitConfigMode();
+                    setIsMenuOpen(false);
+                  }}
+                />
+              ) : null}
+              <button
+                type="button"
+                aria-label={configMode ? "Exit config" : "Config"}
+                onClick={() =>
+                  configMode ? exitConfigMode() : setConfigMode(true)
+                }
+                className={`flex size-7 items-center justify-center rounded-full border transition-colors ${
+                  configMode
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon icon={Settings01Icon} className="size-3.5" />
+              </button>
+            </div>
           </div>
+
+          {/* Select-all row */}
+          {configMode ? (
+            <div className="flex items-center gap-2 border-b px-3 py-1.5">
+              <button
+                type="button"
+                aria-label={allSelected ? "Deselect all" : "Select all"}
+                onClick={toggleSelectAll}
+                className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                  allSelected
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-muted-foreground/40"
+                }`}
+              >
+                {allSelected ? (
+                  <Icon icon={MinusSignIcon} className="size-2.5" />
+                ) : selectionMode ? (
+                  <span className="block size-1.5 rounded-full bg-muted-foreground/40" />
+                ) : null}
+              </button>
+              <span className="text-xs text-muted-foreground">
+                {allSelected ? "Deselect all" : "Select all"}
+              </span>
+            </div>
+          ) : null}
+
+          {/* Log list */}
           <div className="max-h-[65vh] overflow-auto p-2 max-md:max-h-[calc(100dvh-4rem)]">
             {groups.today.length > 0 && (
               <>

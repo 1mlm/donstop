@@ -323,6 +323,11 @@ export default function TaskBar() {
           </div>
 
           <TaskList taskIDs={rootTaskIDs} />
+          {rootTaskIDs.length === 0 ? (
+            <p className="px-2 pt-2 text-xs text-muted-foreground/50 select-none">
+              No tasks yet — type above and press Enter.
+            </p>
+          ) : null}
         </Bar>
 
         <DragOverlay dropAnimation={null}>
