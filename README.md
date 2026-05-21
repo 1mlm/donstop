@@ -1,110 +1,79 @@
 # DonStop
 
 <p align="center">
-  <img src="public/banner.png" alt="DonStop banner" />
+  <img src="public/banner.png" alt="DonStop" />
 </p>
 
-<p align="center">
-	<a href="https://nextjs.org/"><img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-black?logo=next.js"></a>
-	<a href="https://react.dev/"><img alt="React" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white"></a>
-	<a href="https://www.typescriptlang.org/"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white"></a>
-	<a href="https://tailwindcss.com/"><img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white"></a>
-	<a href="https://zustand-demo.pmnd.rs/"><img alt="Zustand" src="https://img.shields.io/badge/Zustand-State_Store-5A3E2B?logo=thestorygraph&logoColor=white"></a>
-	<a href="https://dndkit.com/"><img alt="dnd-kit" src="https://img.shields.io/badge/dnd--kit-Drag_%26_Drop-6E56CF?logo=hackthebox&logoColor=white"></a>
-	<a href="https://biomejs.dev/"><img alt="Biome" src="https://img.shields.io/badge/Biome-Lint_%26_Format-60A5FA?logo=biome&logoColor=white"></a>
-</p>
+Task timer built for ADHD focus. Write a task, start the clock, stop when done. Tags keep things organized. Google Calendar sync is optional. Zero friction to start working.
 
-Task timer built for ADHD focus. Write tasks fast, tag them, track time live, finish when done, optionally sync to Google Calendar. Zero friction to start working.
+## Why
 
-## Demo
-
-https://github.com/user-attachments/assets/457b6fdf-ead1-41c3-9669-9ed8faa23ce8
-
-## Why I built this
-
-Keeping up with school, a part-time SWE job, and learning cybersecurity on the side is hard (especially with ADHD). I wanted something that logs my work as calendar events so I can actually see where my time goes. Turns out seeing your hours stack up in Google Calendar is really motivating, and seeing the gaps where you were just scrolling TikTok is even more motivating.
-
-## AI
-
-Built by me with strong opinions on architecture, file naming, UI, and what "too big" means for a file or folder. Claude (claude-sonnet-4-6) pairs on this project for bug fixes, UI polish, unit tests, drag-and-drop edge cases, Calendar integration, and store logic. It uses my previous projects as style reference so the output actually fits.
+Keeping up with school, a part-time SWE job, and learning cybersecurity on the side is hard with ADHD. I wanted something that logs work as calendar events so I can see where my time actually goes. Seeing hours stack up in Google Calendar is motivating. Seeing the gaps where you were scrolling TikTok is even more motivating.
 
 ## Features
 
 **Tasks**
-- Flat task list with tags — create/rename/finish/restore/delete/favorite inline
-- Tags: create with a name + icon from a curated set, filter task list by tag, remove from task
-- Drag and drop (before/after) with overlay and placeholder rendering
-- Date-grouped list headers (Today, Yesterday, N days ago, Never started)
-- Auto-sort by last activated (most recently worked-on task floats to top)
-- Live duration per task and cumulative tracked time
+- Flat task list with tags (name + icon), filter by tag
+- Date-grouped headers: Today, Yesterday, N days ago, Never started
+- Drag and drop to reorder
 - Start, stop, finish, cancel, reset, transfer time between tasks
-- Time edit popover (supports hh:mm:ss, mm:ss, or just seconds)
+- Time edit popover (hh:mm:ss, mm:ss, or just seconds)
+- Favorite tasks, inline rename, inline delete
+
+**Timer**
+- Live running clock per task
+- Red favicon and tab title update when a task is active
 - Ctrl+Enter to finish the active task from anywhere
 
 **History**
-- Full session log with timestamps, durations, and an activity feed
-- Activity covers: finish, transfer, reposition, calendar events, settings changes
+- Full session log with timestamps and durations
+- Activity feed: finishes, transfers, repositions, calendar events, settings changes
 - Filter activity by type
 
 **Settings**
-- Primary color, theme (light/dark/system), timezone, custom cursor toggle
-- Clear everything button (with confirmation)
+- Primary color, light/dark/system theme, timezone, custom cursor
+- Clear everything button
 
 **Google Calendar (optional)**
-- Disabled by default, only activates with `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
-- Link/unlink account, pick destination calendar, auto-sync on finish
-- Dedupe guard so you don't get double events
-- Event manager with multi-select delete
+- Link account, pick destination calendar, auto-sync on finish
+- Requires `NEXT_PUBLIC_GOOGLE_CLIENT_ID`
 
-**Platform**
-- PWA-installable (Chrome address bar > Install DonStop), badge API shows a dot on the taskbar icon when a task is active
-- Green favicon + tab title update when working ("ok DonStop" in browser, just "ok" in PWA)
-- Local-first, everything persists to localStorage
-- 35+ unit tests (node:test)
-- Mobile-friendly
+**PWA**
+- Install from Chrome address bar
+- Badge API shows a dot on the taskbar icon when a task is running
+- Local-first, persists to localStorage
 
-**Dev toolbar** (dev only, bottom-right corner)
-- Populate fake data, add quick tasks, show tour, copy store JSON, reset everything
-- Zero prod bundle impact (dynamic import, dead-code-eliminated in prod)
+## Dev toolbar (dev only)
 
-## Quick Start
+Bottom-right corner. Populate fake data, add quick tasks, show tour, copy store JSON, reset everything. Zero prod bundle impact.
+
+## Quick start
 
 ```bash
 npm install
 npm run dev
+# open http://localhost:3005
 ```
-
-Open http://localhost:3005
-
-Install as PWA: open in Chrome, click the install icon in the address bar. Once installed, you'll get a taskbar badge dot when a task is running.
 
 ## Environment
 
 No env vars needed to run locally. Optional:
 
 ```env
-# enables Google Calendar integration
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
-
-# used in calendar event descriptions and metadata
 NEXT_PUBLIC_APP_URL=https://donstop.vercel.app
-
-# debug logs (default: false)
 NEXT_PUBLIC_MALIK_DEBUG=false
 ```
 
-## Google Calendar Setup
+## Google Calendar setup
 
-1. Create/select a project in Google Cloud Console
+1. Create a project in Google Cloud Console
 2. Enable Google Calendar API
 3. Configure OAuth consent screen
 4. Create an OAuth Client ID (Web application)
-5. Add authorized origin: http://localhost:3005
+5. Add `http://localhost:3005` to authorized origins
 6. Add `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to `.env.local`
-7. Restart dev server
-8. In the app, open Calendar integration and pick a destination calendar
-
-For production, also add your domain to authorized origins and set both env vars in Vercel.
+7. Restart dev server and open Calendar integration in the app
 
 Scopes needed:
 - `https://www.googleapis.com/auth/calendar.calendarlist.readonly`
@@ -116,9 +85,12 @@ Scopes needed:
 ```bash
 npm run dev        # dev server on port 3005
 npm run build      # production build
-npm run start      # production server
 npm run check      # TypeScript type check
-npm run biome      # lint (read-only)
+npm run biome      # lint
 npm run biome:fix  # lint + auto-fix
-npm test           # run unit tests
+npm test           # unit tests
 ```
+
+## AI
+
+Built by me with strong opinions on architecture, file naming, UI, and what "too big" means for a file. Claude (claude-sonnet-4-6) pairs on this for bug fixes, UI polish, unit tests, drag-and-drop edge cases, Calendar integration, and store logic.
