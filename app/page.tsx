@@ -3,6 +3,7 @@ import { Note05Icon } from "@hugeicons/core-free-icons";
 import dynamic from "next/dynamic";
 import { ActiveTaskIndicator } from "@/cpns/ActiveTaskIndicator";
 import { CustomProvider } from "@/cpns/CustomProvider";
+import { DeprecatedDataModal } from "@/cpns/DeprecatedDataModal";
 import { Icon } from "@/cpns/Icon";
 import MainBar from "@/cpns/MainBar";
 import { AppCredits, AppTopBar, TopControls } from "@/cpns/page";
@@ -18,6 +19,7 @@ export default function HomePage() {
   return (
     <CustomProvider>
       <ActiveTaskIndicator />
+      <DeprecatedDataModal />
       <WelcomeTour />
       {DevToolbar && <DevToolbar />}
       <div className="relative min-h-screen w-full overflow-x-hidden lg:h-screen lg:overflow-hidden">

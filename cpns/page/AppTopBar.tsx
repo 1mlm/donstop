@@ -11,6 +11,7 @@ import HistoryMenu from "@/cpns/history/HistoryMenu";
 import { Icon } from "@/cpns/Icon";
 import { SettingsButton } from "@/cpns/settings";
 import TrashButton from "@/cpns/TrashButton";
+import TagsButton from "@/cpns/tags/TagsButton";
 import { cn } from "@/shadcn/lib/utils";
 import { Button } from "@/shadcn/ui/button";
 import { ButtonGroup } from "@/shadcn/ui/button-group";
@@ -22,6 +23,7 @@ const CREDIT_LINK_CLASS =
 const TOP_CONTROLS = [
   TrashButton,
   HistoryMenu,
+  TagsButton,
   GoogleCalendarControls,
   SettingsButton,
 ] as const satisfies readonly ComponentType[];
