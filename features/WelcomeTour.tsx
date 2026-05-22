@@ -8,6 +8,7 @@ import {
   SurpriseIcon,
   WavingHand01Icon,
 } from "@hugeicons/core-free-icons";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { safeLocalStorage } from "@/lib/safe-local-storage";
 import CuteVideoPlayer from "./CuteVideoPlayer";
@@ -84,7 +85,11 @@ export default function WelcomeTour() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" />
+      <div
+        className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
+          animState === "idle" ? "opacity-100" : "opacity-0"
+        }`}
+      />
 
       <div
         className={`relative z-10 mx-auto w-full max-w-4xl rounded-2xl bg-popover p-4 shadow-lg md:flex md:gap-4 max-h-[90vh] overflow-hidden transform transition-all duration-300 ${
@@ -104,12 +109,21 @@ export default function WelcomeTour() {
         </div>
 
         <div className="flex flex-1 flex-col gap-3 p-2 overflow-y-auto">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-primary/90 p-2 text-white">
-              <Icon icon={steps[idx].icon} />
-            </div>
-            <h3 className="text-lg font-semibold">{steps[idx].title}</h3>
-          </div>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.15 }}
+              className="flex items-center gap-3"
+            >
+              <div className="rounded-full bg-primary/90 p-2 text-white">
+                <Icon icon={steps[idx].icon} />
+              </div>
+              <h3 className="text-lg font-semibold">{steps[idx].title}</h3>
+            </motion.div>
+          </AnimatePresence>
 
           <div className="relative w-full overflow-hidden">
             <div

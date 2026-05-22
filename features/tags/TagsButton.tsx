@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   Cancel01Icon,
@@ -6,7 +6,7 @@ import {
   Tag01Icon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import { Icon } from "@/cpns/Icon";
+import { Icon } from "@/features/Icon";
 import { type TagID, useTODOStore } from "@/lib/store";
 import { Button } from "@/shadcn/ui/button";
 import {
@@ -97,7 +97,9 @@ export default function TagsButton() {
                     <button
                       type="button"
                       onClick={() =>
-                        setActiveTagFilter(isFiltered ? null : (tag.id as TagID))
+                        setActiveTagFilter(
+                          isFiltered ? null : (tag.id as TagID),
+                        )
                       }
                       className={`flex flex-1 items-center gap-1.5 rounded-lg px-2 py-1 text-sm transition-colors ${
                         isFiltered

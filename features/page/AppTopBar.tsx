@@ -1,4 +1,4 @@
-import {
+﻿import {
   ArrowUpRight01Icon,
   Github,
   LicenseIcon,
@@ -6,12 +6,12 @@ import {
 } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
-import GoogleCalendarControls from "@/cpns/calendar/GoogleCalendarControls";
-import HistoryMenu from "@/cpns/history/HistoryMenu";
-import { Icon } from "@/cpns/Icon";
-import { SettingsButton } from "@/cpns/settings";
-import TrashButton from "@/cpns/TrashButton";
-import TagsButton from "@/cpns/tags/TagsButton";
+import GoogleCalendarControls from "@/features/calendar/GoogleCalendarControls";
+import HistoryMenu from "@/features/history/HistoryMenu";
+import { Icon } from "@/features/Icon";
+import { SettingsButton } from "@/features/settings";
+import TrashButton from "@/features/TrashButton";
+import TagsButton from "@/features/tags/TagsButton";
 import { cn } from "@/shadcn/lib/utils";
 import { Button } from "@/shadcn/ui/button";
 import { ButtonGroup } from "@/shadcn/ui/button-group";
@@ -57,6 +57,7 @@ function RightControls() {
                   className="rounded-full squircle squircle-l-full! rounded-r-none! px-3"
                 >
                   <Icon icon={PolicyIcon} className="size-4" />
+                  <span className="text-xs lg:hidden">Privacy</span>
                 </Button>
               </Link>
             </TooltipTrigger>
@@ -76,6 +77,7 @@ function RightControls() {
                   className="rounded-full squircle rounded-l-none! squircle-r-full! px-3"
                 >
                   <Icon icon={LicenseIcon} className="size-4" />
+                  <span className="text-xs lg:hidden">Terms</span>
                 </Button>
               </Link>
             </TooltipTrigger>

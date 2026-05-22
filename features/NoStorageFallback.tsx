@@ -1,5 +1,5 @@
-import { AlertDiamondIcon } from "@hugeicons/core-free-icons";
-import { Icon } from "@/cpns/Icon";
+﻿import { AlertDiamondIcon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/features/Icon";
 import { cn } from "@/shadcn/lib/utils";
 
 export function NoStorageFallback() {

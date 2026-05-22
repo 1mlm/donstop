@@ -143,16 +143,23 @@ function NotesBadge({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none text-muted-foreground hover:bg-muted/80 transition-colors"
-          aria-label={`${count} note${count > 1 ? "s" : ""}`}
-        >
-          <Icon icon={NoteEditIcon} className="size-3" />
-          {count > 1 ? count : null}
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium leading-none text-muted-foreground hover:bg-muted/80 transition-colors"
+              aria-label={`${count} note${count > 1 ? "s" : ""}`}
+            >
+              <Icon icon={NoteEditIcon} className="size-3" />
+              {count > 1 ? count : null}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          {count} {count === 1 ? "note" : "notes"}
+        </TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="w-72 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium">Notes</p>

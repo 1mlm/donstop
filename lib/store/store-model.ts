@@ -32,6 +32,7 @@ const taskObjSchema = z.object({
   finishedAt: z.string().optional(),
   isFavorite: z.boolean().optional(),
   lastActivatedAt: z.string().optional(),
+  deletedAt: z.string().optional(),
 });
 
 const tagSchema = z.object({

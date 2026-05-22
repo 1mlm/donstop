@@ -21,9 +21,8 @@ import {
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTaskRunningSecondsThrottled } from "@/lib/active-task.hooks";
 import { type TagID, type TaskID, useTODOStore } from "@/lib/store";
-import { useTaskRunningSecondsThrottled } from "@/lib/task.hooks";
-import { formatPreviewTime } from "@/lib/util";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import {
   Tooltip,
@@ -731,14 +730,19 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           aria-label="Task duration"
                           className="w-24 rounded-lg bg-muted/60 px-2 py-1 font-mono text-sm tabular-nums outline-none placeholder:text-muted-foreground/50 focus:bg-muted focus:ring-1 focus:ring-ring/40"
                         />
-                        <button
-                          type="button"
-                          onClick={commitTimeEdit}
-                          aria-label="Save duration"
-                          className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary"
-                        >
-                          <Icon icon={Tick02Icon} className="size-4" />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={commitTimeEdit}
+                              aria-label="Save duration"
+                              className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-primary/15 hover:text-primary"
+                            >
+                              <Icon icon={Tick02Icon} className="size-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Save</TooltipContent>
+                        </Tooltip>
                       </div>
                       {timeEditError ? (
                         <p className="mt-1 text-xs text-destructive">

@@ -1,5 +1,6 @@
-import { Delete01Icon } from "@hugeicons/core-free-icons";
-import { Icon } from "@/cpns/Icon";
+﻿import { Delete01Icon, Undo03Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useState } from "react";
+import { Icon } from "@/features/Icon";
 import { useTODOStore } from "@/lib/store";
 import { formatRelativeTime } from "@/lib/util";
 import { Button } from "@/shadcn/ui/button";
@@ -13,6 +14,14 @@ import {
 
 export default function TrashButton() {
   const deletedTasks = useTODOStore((s) => s.deletedTasks);
+  const [open, setOpen] = useState(false);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!open) return;
+    const id = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(id);
+  }, [open]);
   const restoreDeletedTask = useTODOStore((s) => s.restoreDeletedTask);
   const clearTrash = useTODOStore((s) => s.clearTrash);
   const hasDeleted = deletedTasks.length > 0;
@@ -24,18 +33,18 @@ export default function TrashButton() {
           variant="outline"
           size="sm"
           className="rounded-full squircle squircle-full px-3 opacity-50 hover:bg-transparent"
-          aria-label="Empty Trash"
+          aria-label="Trash"
           disabled
         >
           <Icon icon={Delete01Icon} />
-          Empty Trash
+          Trash
         </Button>
       </span>
     );
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <span className="inline-flex cursor-pointer-custom">
           <Button
@@ -45,7 +54,7 @@ export default function TrashButton() {
             aria-label="Trash"
           >
             <Icon icon={Delete01Icon} />
-            Trash
+            Trash ({deletedTasks.length})
           </Button>
         </span>
       </PopoverTrigger>
@@ -59,7 +68,8 @@ export default function TrashButton() {
           className="mb-2 w-full"
           onClick={clearTrash}
         >
-          Clean Trash
+          <Icon icon={Delete01Icon} />
+          Empty Trash
         </Button>
         <ul className="max-h-80 space-y-2 overflow-y-auto">
           {deletedTasks.map((task) => (
@@ -80,6 +90,7 @@ export default function TrashButton() {
                 variant="secondary"
                 onClick={() => restoreDeletedTask(task.id)}
               >
+                <Icon icon={Undo03Icon} />
                 Restore
               </Button>
             </li>

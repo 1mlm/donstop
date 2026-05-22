@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { NoStorageFallback } from "@/cpns/NoStorageFallback";
+﻿import { useEffect, useState } from "react";
+import { NoStorageFallback } from "@/features/NoStorageFallback";
 import { isLocalStorageAvailable } from "@/lib/safe-local-storage";
 
 export function StorageGuard({ children }: { children: React.ReactNode }) {

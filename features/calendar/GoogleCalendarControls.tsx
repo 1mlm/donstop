@@ -6,6 +6,7 @@ import {
   ArrowDown01Icon,
   CalendarRemove01Icon,
   CalendarSetting01Icon,
+  Cancel01Icon,
   CloudIcon,
   CloudOffIcon,
   Delete02Icon,
@@ -15,6 +16,7 @@ import {
   Play,
   RedoIcon,
   StopIcon,
+  Tick02Icon,
   UnavailableIcon,
 } from "@hugeicons/core-free-icons";
 import { googleLogout } from "@react-oauth/google";
@@ -678,9 +680,9 @@ function GoogleCalendarControlsInner() {
                 Enabling Google Calendar will send each event you've worked on
                 on the specific calendar of your choice so you can keep track of
                 your productivity. This mainly aims at motivating a lot of
-                procasting students like me so they can litterally "visualize"
-                their productivity which helps to fight procrastination in the
-                long term.
+                procrastinating students like me so they can literally
+                "visualize" their productivity which helps to fight
+                procrastination in the long term.
               </p>
               <Button
                 variant="outline"
@@ -998,6 +1000,7 @@ function GoogleCalendarControlsInner() {
                       setNewCalendarName(DEFAULT_NEW_CALENDAR_NAME);
                     }}
                   >
+                    <Icon icon={Cancel01Icon} />
                     Cancel
                   </Button>
                   <Button
@@ -1202,6 +1205,7 @@ function GoogleCalendarControlsInner() {
                                 disabled={isCalendarUiLocked}
                                 onClick={() => setIsRangePopoverOpen(false)}
                               >
+                                <Icon icon={Cancel01Icon} />
                                 Cancel
                               </Button>
                               <Button
@@ -1212,6 +1216,7 @@ function GoogleCalendarControlsInner() {
                                 }
                                 onClick={toggleSelectionForDateRange}
                               >
+                                <Icon icon={Tick02Icon} />
                                 Apply range
                               </Button>
                             </div>

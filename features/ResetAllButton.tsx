@@ -1,8 +1,10 @@
-"use client";
+﻿"use client";
 
 import {
   BlackHoleIcon,
+  Cancel01Icon,
   CloudOffIcon,
+  Delete02Icon,
   HourglassIcon,
   NewsIcon,
   Task01Icon,
@@ -12,13 +14,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DEFAULT_PRIMARY_COLOR,
   SETTINGS_RESET_EVENT,
-} from "@/cpns/settings/settings.constants";
+} from "@/features/settings/settings.constants";
 import {
   applyCursorEnabled,
   applyPrimaryColor,
   writeStoredCursorEnabled,
   writeStoredPrimaryColor,
-} from "@/cpns/settings/settings.utils";
+} from "@/features/settings/settings.utils";
 import {
   clearStoredGoogleCalendarAuth,
   GOOGLE_CALENDAR_RESET_EVENT,
@@ -281,6 +283,7 @@ export default function ResetAllButton() {
               setIsOpen(false);
             }}
           >
+            <Icon icon={Cancel01Icon} />
             Cancel
           </Button>
           <AlertDialogAction
@@ -310,6 +313,7 @@ export default function ResetAllButton() {
               }
             }}
           >
+            <Icon icon={Delete02Icon} />
             {isWaitDone ? "Delete Everything" : "Read first"}
           </AlertDialogAction>
         </AlertDialogFooter>

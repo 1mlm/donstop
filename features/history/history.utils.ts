@@ -68,10 +68,10 @@ export function formatRelativeDuration(seconds: number) {
   const secs = seconds % 60;
 
   if (hours > 0) {
-    return `${hours}h${minutes}m${secs}s`;
+    return `${hours}h${minutes > 0 ? `${minutes}m` : ""}${secs > 0 ? `${secs}s` : ""}`;
   }
 
-  return `${minutes}m${secs}s`;
+  return `${minutes}m${secs > 0 ? `${secs}s` : ""}`;
 }
 
 export function buildDisplayActivity(

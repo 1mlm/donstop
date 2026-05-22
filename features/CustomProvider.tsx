@@ -1,5 +1,5 @@
-import { GoogleCalendarProvider } from "@/cpns/calendar/GoogleCalendarProvider";
-import { StorageGuard } from "@/cpns/StorageGuard";
+﻿import { GoogleCalendarProvider } from "@/features/calendar/GoogleCalendarProvider";
+import { StorageGuard } from "@/features/StorageGuard";
 import { TODOStoreProvider } from "@/lib/store";
 import { TooltipProvider } from "@/shadcn/ui/tooltip";
 import CustomCursor from "./CustomCursor";

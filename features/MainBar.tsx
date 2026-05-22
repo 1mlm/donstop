@@ -3,9 +3,9 @@
 import { PartyIcon, SleepingIcon, StopIcon } from "@hugeicons/core-free-icons";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
+import { useActiveTaskSummary } from "@/lib/active-task.hooks";
 import { MOTION_PROPS } from "@/lib/motion";
 import { useTODOStore } from "@/lib/store";
-import { useActiveTaskSummary } from "@/lib/task.hooks";
 import { formatPreviewTime } from "@/lib/util";
 import { Button } from "@/shadcn/ui/button";
 import {

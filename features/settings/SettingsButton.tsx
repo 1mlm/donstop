@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   ArrowDown01Icon,
@@ -13,7 +13,7 @@ import {
   TimeQuarterIcon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
-import ResetAllButton from "@/cpns/ResetAllButton";
+import ResetAllButton from "@/features/ResetAllButton";
 import { useTODOStore } from "@/lib/store";
 import {
   COMMON_TIMEZONES,
@@ -180,7 +180,7 @@ export default function SettingsButton() {
             </Select>
           </SettingRow>
 
-          <SettingRow icon={BlackHole01Icon} title="Erase everything">
+          <SettingRow icon={BlackHole01Icon} title="Reset everything">
             <ResetAllButton />
           </SettingRow>
 
@@ -193,6 +193,7 @@ export default function SettingsButton() {
                 window.dispatchEvent(new Event("show-welcome-tour"))
               }
             >
+              <Icon icon={CamperIcon} />
               Show tour
             </Button>
           </SettingRow>
@@ -205,6 +206,7 @@ export default function SettingsButton() {
               disabled={!canPopulateFakeData}
               onClick={populateFakeData}
             >
+              <Icon icon={TestTube01Icon} />
               Populate
             </Button>
           </SettingRow>

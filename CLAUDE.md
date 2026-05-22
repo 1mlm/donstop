@@ -18,16 +18,17 @@ Task timer for ADHD focus. Start/stop tasks, track time, finish when done. Googl
 
 | What | Where |
 |------|-------|
-| Task row UI + controls | `cpns/task/Task.tsx` |
-| Task actions menu (More button portal) | `cpns/task/task.components.tsx` |
-| Drag-and-drop root | `cpns/task/TaskBar.tsx` |
+| Task row UI + controls | `features/task/Task.tsx` |
+| Task actions menu (More button portal) | `features/task/task.components.tsx` |
+| Drag-and-drop root | `features/task/TaskBar.tsx` |
 | All store actions (create/start/stop/finish/delete) | `lib/store/store-create.ts` |
 | Task move/reorder logic | `lib/store/store-move.ts` |
 | Store types | `lib/store/store-model.ts` |
-| Active task favicon + tab title | `components/ActiveTaskIndicator.tsx` |
-| History/activity log UI | `cpns/history/HistoryMenu.tsx` |
-| Settings | `cpns/settings/` |
-| Google Calendar | `cpns/calendar/` + `lib/calendar/` |
+| Active task favicon + tab title | `features/ActiveTaskIndicator.tsx` |
+| History/activity log UI | `features/history/HistoryMenu.tsx` |
+| Settings | `features/settings/` |
+| Google Calendar | `features/calendar/` + `lib/calendar/` |
+| Active task time hooks | `lib/active-task.hooks.ts` |
 
 ## Dev commands
 

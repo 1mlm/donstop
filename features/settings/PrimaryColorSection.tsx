@@ -1,5 +1,5 @@
-import { PaintBoardIcon } from "@hugeicons/core-free-icons";
-import { Icon } from "@/cpns/Icon";
+﻿import { PaintBoardIcon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/features/Icon";
 import { cn } from "@/shadcn/lib/utils";
 import { type PaletteColor, TAILWIND_500_COLORS } from "./settings.constants";
 import { applyPrimaryColor, writeStoredPrimaryColor } from "./settings.utils";

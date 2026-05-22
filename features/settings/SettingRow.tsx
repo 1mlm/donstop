@@ -1,5 +1,5 @@
-import type { HugeIcon } from "@/cpns/Icon";
-import { Icon } from "@/cpns/Icon";
+﻿import type { HugeIcon } from "@/features/Icon";
+import { Icon } from "@/features/Icon";
 
 export function SettingRow({
   icon,

@@ -149,6 +149,7 @@ function ClearRangePopover({
             className="w-full"
             onClick={handleClear}
           >
+            <Icon icon={Delete02Icon} />
             Delete logs
           </Button>
         </div>
