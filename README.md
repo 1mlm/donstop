@@ -63,6 +63,7 @@ No env vars needed to run locally. Optional:
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
 NEXT_PUBLIC_APP_URL=https://donstop.vercel.app
 ```
+On this app's case, there is no NEXT_PUBLIC_APP_URL= on the local .env, and there is (I put it manually) on the Vercel production env variables.
 
 ## Google Calendar setup
 
