@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
+import { TAG_ICONS } from "../tags/tag-icons";
 import { useTaskDndContext } from "./TaskDndContext";
 import {
   DropGapIndicator,
@@ -45,7 +46,6 @@ import {
   useTaskEditValueSyncEffect,
 } from "./task.hooks";
 import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
-import { TAG_ICONS } from "../tags/tag-icons";
 
 function formatDurationInputValue(totalSeconds: number) {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -79,21 +79,34 @@ function parseDurationInputValue(raw: string) {
   return left * 3600 + middle + (right ?? 0);
 }
 
-function TaskTagChips({ tagIds, taskID }: { tagIds: string[]; taskID: TaskID }) {
+function TaskTagChips({
+  tagIds,
+  taskID,
+}: {
+  tagIds: string[];
+  taskID: TaskID;
+}) {
   const tags = useTODOStore((s) => s.tags);
   const removeTagFromTask = useTODOStore((s) => s.removeTagFromTask);
   const setActiveTagFilter = useTODOStore((s) => s.setActiveTagFilter);
   const activeTagFilter = useTODOStore((s) => s.activeTagFilter);
 
   const taskTags = useMemo(
-    () => tagIds.map((id) => tags.find((t) => t.id === id)).filter(Boolean) as typeof tags,
+    () =>
+      tagIds
+        .map((id) => tags.find((t) => t.id === id))
+        .filter(Boolean) as typeof tags,
     [tagIds, tags],
   );
 
   if (taskTags.length === 0) return null;
 
   return (
-    <div className="mt-1 flex flex-wrap gap-1 pl-0.5" onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      className="mt-1 flex flex-wrap gap-1 pl-0.5"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       {taskTags.map((tag) => {
         const IconComp = TAG_ICONS[tag.icon];
         const isFiltered = activeTagFilter === tag.id;
@@ -130,7 +143,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const [isTimePopoverOpen, setIsTimePopoverOpen] = useState(false);
   const [editTimeValue, setEditTimeValue] = useState("00:00:00");
   const [timeEditError, setTimeEditError] = useState<string | null>(null);
-  const [actionsMenuPos, setActionsMenuPos] = useState<{ left: number; top: number } | null>(null);
+  const [actionsMenuPos, setActionsMenuPos] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
   const taskHeaderRowRef = useRef<HTMLDivElement | null>(null);
   const editInputRef = useRef<HTMLSpanElement | null>(null);
   const actionsTriggerRef = useRef<HTMLDivElement | null>(null);
@@ -138,7 +154,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
   // Close actions menu on outside tap (mobile)
   useEffect(() => {
     if (!actionsMenuOpen) return;
-    if (typeof window === "undefined" || (!("ontouchstart" in window) && !(navigator.maxTouchPoints > 0))) return;
+    if (
+      typeof window === "undefined" ||
+      (!("ontouchstart" in window) && !(navigator.maxTouchPoints > 0))
+    )
+      return;
 
     function handlePointerDown(e: PointerEvent) {
       const menu = document.querySelector(".fixed.z-\\[9999\\]");
@@ -146,16 +166,25 @@ export function Task({ taskID }: { taskID: TaskID }) {
       if (actionsTriggerRef.current?.contains(e.target as Node)) return;
       setActionsMenuOpen(false);
     }
-    window.addEventListener("pointerdown", handlePointerDown, { capture: true });
-    return () => window.removeEventListener("pointerdown", handlePointerDown, { capture: true });
+    window.addEventListener("pointerdown", handlePointerDown, {
+      capture: true,
+    });
+    return () =>
+      window.removeEventListener("pointerdown", handlePointerDown, {
+        capture: true,
+      });
   }, [actionsMenuOpen]);
 
   const startTask = useTODOStore((state) => state.startTask);
   const stopActiveTask = useTODOStore((state) => state.stopActiveTask);
   const finishActiveTask = useTODOStore((state) => state.finishActiveTask);
-  const resetActiveTaskDuration = useTODOStore((state) => state.resetActiveTaskDuration);
+  const resetActiveTaskDuration = useTODOStore(
+    (state) => state.resetActiveTaskDuration,
+  );
   const cancelActiveTask = useTODOStore((state) => state.cancelActiveTask);
-  const transferActiveTaskTime = useTODOStore((state) => state.transferActiveTaskTime);
+  const transferActiveTaskTime = useTODOStore(
+    (state) => state.transferActiveTaskTime,
+  );
   const toggleFavorite = useTODOStore((state) => state.toggleFavorite);
   const finishTask = useTODOStore((state) => state.finishTask);
   const resetTaskDuration = useTODOStore((state) => state.resetTaskDuration);
@@ -164,18 +193,25 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const deleteTask = useTODOStore((state) => state.deleteTask);
   const logTaskCopied = useTODOStore((state) => state.logTaskCopied);
   const task = useTODOStore((state) => state.getTaskFromID(taskID));
-  const isActive = useTODOStore((state) => state.activeSession?.taskId === taskID);
+  const isActive = useTODOStore(
+    (state) => state.activeSession?.taskId === taskID,
+  );
   const activeTaskID = useTODOStore((state) => state.activeSession?.taskId);
   const runningSeconds = useTaskRunningSecondsThrottled(taskID);
   const isFavorite = task?.isFavorite ?? false;
   const taskLabel = task?.label ?? "";
   const taskStoredSeconds = task?.time ?? 0;
   const { draggingTaskID } = useTaskDndContext();
-  const shouldShowRowControls = (!draggingTaskID && isTaskHovered) || actionsMenuOpen;
+  const shouldShowRowControls =
+    (!draggingTaskID && isTaskHovered) || actionsMenuOpen;
   const isAnyMenuOpen = actionsMenuOpen;
 
   useTaskEditValueSyncEffect({ taskLabel, setEditValue: setEditNameValue });
-  useTaskEditableFocusEffect({ isEditing: editMode === "name", taskLabel, editInputRef });
+  useTaskEditableFocusEffect({
+    isEditing: editMode === "name",
+    taskLabel,
+    editInputRef,
+  });
 
   useEffect(() => {
     if (!isTaskHovered || isAnyMenuOpen) return;
@@ -186,7 +222,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
       if (!rowNode.contains(event.target)) setIsTaskHovered(false);
     };
 
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
+    window.addEventListener("pointermove", handlePointerMove, {
+      passive: true,
+    });
     return () => window.removeEventListener("pointermove", handlePointerMove);
   }, [isTaskHovered, isAnyMenuOpen]);
 
@@ -200,7 +238,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
     const handlePointerDown = (e: PointerEvent) => {
       const trigger = actionsTriggerRef.current;
-      const menu = document.querySelector(`[data-task-actions-menu="${taskID}"]`);
+      const menu = document.querySelector(
+        `[data-task-actions-menu="${taskID}"]`,
+      );
       const target = e.target as Node;
       if (!trigger?.contains(target) && !menu?.contains(target)) {
         setActionsMenuOpen(false);
@@ -267,7 +307,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
     setIsTimePopoverOpen(false);
   };
 
-  useActionsMenuViewportSyncEffect({ actionsMenuOpen, updateActionsMenuPosition });
+  useActionsMenuViewportSyncEffect({
+    actionsMenuOpen,
+    updateActionsMenuPosition,
+  });
 
   const tryDeleteTask = () => {
     const didDelete = deleteTask(taskID);
@@ -287,14 +330,17 @@ export function Task({ taskID }: { taskID: TaskID }) {
     disabled: editMode !== null || isTimePopoverOpen,
   });
 
-  const { setNodeRef: setDropBeforeNodeRef, isOver: isOverBefore } = useDroppable({
-    id: getTaskDropTargetID(taskID, "before"),
-    disabled: isDropDisabled,
-  });
-  const { setNodeRef: setDropAfterNodeRef, isOver: isOverAfter } = useDroppable({
-    id: getTaskDropTargetID(taskID, "after"),
-    disabled: isDropDisabled,
-  });
+  const { setNodeRef: setDropBeforeNodeRef, isOver: isOverBefore } =
+    useDroppable({
+      id: getTaskDropTargetID(taskID, "before"),
+      disabled: isDropDisabled,
+    });
+  const { setNodeRef: setDropAfterNodeRef, isOver: isOverAfter } = useDroppable(
+    {
+      id: getTaskDropTargetID(taskID, "after"),
+      disabled: isDropDisabled,
+    },
+  );
 
   if (!task) return null;
 
@@ -314,8 +360,14 @@ export function Task({ taskID }: { taskID: TaskID }) {
           icon: PartyIcon,
           label: "Finish",
           onClick: isActive
-            ? () => { finishActiveTask(); closeMenus(); }
-            : () => { finishTask(taskID); closeMenus(); },
+            ? () => {
+                finishActiveTask();
+                closeMenus();
+              }
+            : () => {
+                finishTask(taskID);
+                closeMenus();
+              },
         },
         {
           id: "cancel",
@@ -323,7 +375,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
           label: "Cancel",
           visible: isActive,
           confirm: "Are you SURE you want to cancel all the time spent here?",
-          onClick: () => { cancelActiveTask(true); closeMenus(); },
+          onClick: () => {
+            cancelActiveTask(true);
+            closeMenus();
+          },
         },
         {
           id: "favorite",
@@ -345,7 +400,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
               id: "name-edit",
               icon: Edit03Icon,
               label: "Edit",
-              onClick: () => { setEditNameValue(taskLabel); setEditMode("name"); closeMenus(); },
+              onClick: () => {
+                setEditNameValue(taskLabel);
+                setEditMode("name");
+                closeMenus();
+              },
             },
             {
               id: "name-copy",
@@ -365,7 +424,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
               icon: Edit03Icon,
               label: "Edit",
               onClick: () => {
-                setEditTimeValue(formatDurationInputValue(taskStoredSeconds + runningSeconds));
+                setEditTimeValue(
+                  formatDurationInputValue(taskStoredSeconds + runningSeconds),
+                );
                 setTimeEditError(null);
                 setIsTimePopoverOpen(true);
                 closeMenus();
@@ -382,8 +443,14 @@ export function Task({ taskID }: { taskID: TaskID }) {
               icon: UndoIcon,
               label: "Reset",
               onClick: isActive
-                ? () => { resetActiveTaskDuration(); closeMenus(); }
-                : () => { resetTaskDuration(taskID); closeMenus(); },
+                ? () => {
+                    resetActiveTaskDuration();
+                    closeMenus();
+                  }
+                : () => {
+                    resetTaskDuration(taskID);
+                    closeMenus();
+                  },
             },
           ],
         },
@@ -405,7 +472,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
     },
   ];
 
-  const taskDurationLabel = getTaskDurationLabel({ isActive, storedSeconds: task.time, runningSeconds });
+  const taskDurationLabel = getTaskDurationLabel({
+    isActive,
+    storedSeconds: task.time,
+    runningSeconds,
+  });
 
   const isSourceOfActiveDrag = draggingTaskID === taskID;
   const isRowBeingDragged = isDragging || isSourceOfActiveDrag;
@@ -415,7 +486,9 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const showAfterGap = showDropTargets && isOverAfter;
 
   const draggableStyle = {
-    transform: isRowBeingDragged ? undefined : CSS.Translate.toString(transform),
+    transform: isRowBeingDragged
+      ? undefined
+      : CSS.Translate.toString(transform),
     opacity: 1,
   };
 
@@ -443,9 +516,10 @@ export function Task({ taskID }: { taskID: TaskID }) {
             transition-[padding,transform,opacity,border-color,background-color,color,box-shadow]
             duration-300 ease-out border rounded-2xl squircle squircle-2xl py-1.5 px-2 pr-2.5
             ${isAnyMenuOpen ? "z-[200]" : "z-0 hover:z-30"}
-            ${isActive
-              ? "bg-primary/50 text-primary-foreground shadow-lg font-semibold"
-              : "bg-primary/5 hover:bg-primary/7 hover:border-primary/25"
+            ${
+              isActive
+                ? "bg-primary/50 text-primary-foreground shadow-lg font-semibold"
+                : "bg-primary/5 hover:bg-primary/7 hover:border-primary/25"
             }
             ${isRowBeingDragged ? "border-border/50 bg-muted/20 cursor-grabbing-custom" : "cursor-grab-custom"}`}
         >
@@ -465,15 +539,23 @@ export function Task({ taskID }: { taskID: TaskID }) {
               <div
                 ref={taskHeaderRowRef}
                 onPointerEnter={() => {
-                  if (!isRowBeingDragged && typeof window !== "undefined" && !("ontouchstart" in window || navigator.maxTouchPoints > 0)) {
+                  if (
+                    !isRowBeingDragged &&
+                    typeof window !== "undefined" &&
+                    !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                  ) {
                     setIsTaskHovered(true);
                   }
                 }}
                 onPointerLeave={() => {
-                  if (!isRowBeingDragged && !isAnyMenuOpen) setIsTaskHovered(false);
+                  if (!isRowBeingDragged && !isAnyMenuOpen)
+                    setIsTaskHovered(false);
                 }}
                 onTouchEnd={(_e) => {
-                  if (typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0)) {
+                  if (
+                    typeof window !== "undefined" &&
+                    ("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                  ) {
                     setIsTaskHovered(true);
                     updateActionsMenuPosition();
                     setActionsMenuOpen(true);
@@ -494,17 +576,25 @@ export function Task({ taskID }: { taskID: TaskID }) {
                     }`}
                   >
                     <div className="relative" ref={actionsTriggerRef}>
-                      <button
-                        className="rounded-full bg-transparent p-1 transition-colors hover:bg-primary/15"
-                        aria-label="Task group options"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          toggleActionsMenu();
-                        }}
-                      >
-                        <Icon icon={MoreHorizontalSquare01Icon} className="size-4" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            className="rounded-full bg-transparent p-1 transition-colors hover:bg-primary/15"
+                            aria-label="Task group options"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              toggleActionsMenu();
+                            }}
+                          >
+                            <Icon
+                              icon={MoreHorizontalSquare01Icon}
+                              className="size-4"
+                            />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">More options</TooltipContent>
+                      </Tooltip>
                       <TaskActionsMenu
                         open={actionsMenuOpen}
                         position={actionsMenuPos}
@@ -520,22 +610,39 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           onClick={() => {
                             if (isActive) {
                               stopActiveTask();
-                              if (typeof window !== "undefined" && !("ontouchstart" in window || navigator.maxTouchPoints > 0)) {
+                              if (
+                                typeof window !== "undefined" &&
+                                !(
+                                  "ontouchstart" in window ||
+                                  navigator.maxTouchPoints > 0
+                                )
+                              ) {
                                 setActionsMenuOpen(false);
                               }
                               return;
                             }
                             startTask(taskID);
-                            if (typeof window !== "undefined" && !("ontouchstart" in window || navigator.maxTouchPoints > 0)) {
+                            if (
+                              typeof window !== "undefined" &&
+                              !(
+                                "ontouchstart" in window ||
+                                navigator.maxTouchPoints > 0
+                              )
+                            ) {
                               setActionsMenuOpen(false);
                             }
                           }}
                           aria-label={isActive ? "Stop task" : "Start task"}
                         >
-                          <Icon icon={isActive ? StopIcon : Play} className="size-4" />
+                          <Icon
+                            icon={isActive ? StopIcon : Play}
+                            className="size-4"
+                          />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">{isActive ? "Stop task" : "Start task"}</TooltipContent>
+                      <TooltipContent side="top">
+                        {isActive ? "Stop task" : "Start task"}
+                      </TooltipContent>
                     </Tooltip>
                   </div>
                 </div>
@@ -548,21 +655,36 @@ export function Task({ taskID }: { taskID: TaskID }) {
                       suppressContentEditableWarning
                       onClick={(event) => event.stopPropagation()}
                       onPointerDown={(event) => event.stopPropagation()}
-                      onInput={(event) => setEditNameValue(event.currentTarget.textContent ?? "")}
+                      onInput={(event) =>
+                        setEditNameValue(event.currentTarget.textContent ?? "")
+                      }
                       onKeyDown={(event) => {
-                        if (event.key === "Enter") { event.preventDefault(); commitRename(); }
-                        if (event.key === "Escape") { event.preventDefault(); setEditNameValue(taskLabel); setEditMode(null); }
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          commitRename();
+                        }
+                        if (event.key === "Escape") {
+                          event.preventDefault();
+                          setEditNameValue(taskLabel);
+                          setEditMode(null);
+                        }
                       }}
                       onBlur={commitRename}
                       className="inline-block max-w-full min-w-12 rounded-md border-b border-border/60 bg-transparent px-1 text-sm font-medium text-foreground outline-none"
                     />
-                  ) : taskLabel}
+                  ) : (
+                    taskLabel
+                  )}
 
                   <Popover
                     open={isTimePopoverOpen}
                     onOpenChange={(nextOpen) => {
                       if (nextOpen) {
-                        setEditTimeValue(formatDurationInputValue(taskStoredSeconds + runningSeconds));
+                        setEditTimeValue(
+                          formatDurationInputValue(
+                            taskStoredSeconds + runningSeconds,
+                          ),
+                        );
                         setTimeEditError(null);
                       }
                       setIsTimePopoverOpen(nextOpen);
@@ -590,10 +712,20 @@ export function Task({ taskID }: { taskID: TaskID }) {
                         <input
                           autoFocus
                           value={editTimeValue}
-                          onChange={(event) => { setEditTimeValue(event.target.value); if (timeEditError) setTimeEditError(null); }}
+                          onChange={(event) => {
+                            setEditTimeValue(event.target.value);
+                            if (timeEditError) setTimeEditError(null);
+                          }}
                           onKeyDown={(event) => {
-                            if (event.key === "Enter") { event.preventDefault(); commitTimeEdit(); }
-                            if (event.key === "Escape") { event.preventDefault(); setIsTimePopoverOpen(false); setTimeEditError(null); }
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              commitTimeEdit();
+                            }
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              setIsTimePopoverOpen(false);
+                              setTimeEditError(null);
+                            }
                           }}
                           placeholder="hh:mm:ss"
                           aria-label="Task duration"
@@ -608,7 +740,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           <Icon icon={Tick02Icon} className="size-4" />
                         </button>
                       </div>
-                      {timeEditError ? <p className="mt-1 text-xs text-destructive">{timeEditError}</p> : null}
+                      {timeEditError ? (
+                        <p className="mt-1 text-xs text-destructive">
+                          {timeEditError}
+                        </p>
+                      ) : null}
                     </PopoverContent>
                   </Popover>
                 </span>

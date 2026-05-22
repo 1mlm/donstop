@@ -68,7 +68,8 @@ export function formatPreviewTime(time: number) {
   const minutes = Math.floor((time % 3600) / 60);
   const seconds = time % 60;
 
-  return `${hours > 0 ? `${hours}h` : ""}${minutes > 0 ? `${minutes}m` : ""}${seconds}s`;
+  const showSeconds = seconds > 0 || (hours === 0 && minutes === 0);
+  return `${hours > 0 ? `${hours}h` : ""}${minutes > 0 ? `${minutes}m` : ""}${showSeconds ? `${seconds}s` : ""}`;
 }
 
 export function formatChronoTime(time: number) {
