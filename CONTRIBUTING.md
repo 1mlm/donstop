@@ -10,5 +10,6 @@
 | ♻️ | refactor, restructure, cleanup |
 | 📖 | docs, comments, README |
 | 🚀 | performance improvement |
+| ✨ | AI-related changes |
 
 One emoji per commit, at the start of the message. Keep the message short and imperative ("add tag filter" not "added tag filter" not "this commit adds a tag filter").
