@@ -24,7 +24,20 @@ import {
 import { Input } from "@/shadcn/ui/input";
 import { Label } from "@/shadcn/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
-import { TooltipProvider } from "@/shadcn/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/shadcn/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
 import { HistoryActivityLine } from "./HistoryActivityLine";
 import { useHistoryNowMsEffect } from "./history.hooks";
@@ -169,56 +182,74 @@ const KIND_LABELS: Partial<Record<HistoryActivityKind, string>> = {
 function FilterPopover({
   allItems,
   filterTask,
-  filterKinds,
+  filterKind,
+  filterFrom,
+  filterTo,
   onFilterTaskChange,
-  onFilterKindsChange,
+  onFilterKindChange,
+  onFilterFromChange,
+  onFilterToChange,
 }: {
   allItems: HistoryActivityItem[];
   filterTask: string | null;
-  filterKinds: Set<HistoryActivityKind>;
+  filterKind: HistoryActivityKind | null;
+  filterFrom: string;
+  filterTo: string;
   onFilterTaskChange: (task: string | null) => void;
-  onFilterKindsChange: (kinds: Set<HistoryActivityKind>) => void;
+  onFilterKindChange: (kind: HistoryActivityKind | null) => void;
+  onFilterFromChange: (v: string) => void;
+  onFilterToChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
-  const uniqueTasks = Array.from(
-    new Set(allItems.map((i) => i.taskLabel).filter(Boolean)),
-  ).sort();
+  const taskLastSeen = new Map<string, string>();
+  for (const item of allItems) {
+    if (item.taskLabel) {
+      const current = taskLastSeen.get(item.taskLabel);
+      if (!current || item.createdAt > current) {
+        taskLastSeen.set(item.taskLabel, item.createdAt);
+      }
+    }
+  }
+  const uniqueTasks = Array.from(taskLastSeen.entries())
+    .sort((a, b) => b[1].localeCompare(a[1]))
+    .map(([label]) => label);
 
   const presentKinds = Array.from(new Set(allItems.map((i) => i.kind))).filter(
     (k) => k in KIND_LABELS,
   ) as HistoryActivityKind[];
 
-  const activeCount = (filterTask ? 1 : 0) + (filterKinds.size > 0 ? 1 : 0);
-
-  function toggleKind(kind: HistoryActivityKind) {
-    const next = new Set(filterKinds);
-    if (next.has(kind)) next.delete(kind);
-    else next.add(kind);
-    onFilterKindsChange(next);
-  }
+  const activeCount =
+    (filterTask ? 1 : 0) +
+    (filterKind ? 1 : 0) +
+    (filterFrom || filterTo ? 1 : 0);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Filter logs"
-          className={`relative flex size-7 items-center justify-center rounded-full border transition-colors ${
-            activeCount > 0
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Icon icon={FilterIcon} className="size-3.5" />
-          {activeCount > 0 ? (
-            <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground ring-1 ring-background">
-              {activeCount}
-            </span>
-          ) : null}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-3 space-y-3">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Filter logs"
+              className={`relative flex size-7 items-center justify-center rounded-full border transition-colors ${
+                activeCount > 0
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Icon icon={FilterIcon} className="size-3.5" />
+              {activeCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex size-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground ring-1 ring-background">
+                  {activeCount}
+                </span>
+              ) : null}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Filter logs</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-72 space-y-3 p-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium">Filters</p>
           {activeCount > 0 ? (
@@ -227,7 +258,9 @@ function FilterPopover({
               className="text-xs text-muted-foreground hover:text-foreground"
               onClick={() => {
                 onFilterTaskChange(null);
-                onFilterKindsChange(new Set());
+                onFilterKindChange(null);
+                onFilterFromChange("");
+                onFilterToChange("");
               }}
             >
               Clear all
@@ -240,24 +273,25 @@ function FilterPopover({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Task
             </p>
-            <div className="max-h-28 overflow-auto space-y-0.5">
-              {uniqueTasks.map((task) => (
-                <button
-                  key={task}
-                  type="button"
-                  onClick={() =>
-                    onFilterTaskChange(filterTask === task ? null : task)
-                  }
-                  className={`w-full rounded px-2 py-1 text-left text-xs transition-colors ${
-                    filterTask === task
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  {task}
-                </button>
-              ))}
-            </div>
+            <Select
+              value={filterTask ?? "__all__"}
+              onValueChange={(v) =>
+                onFilterTaskChange(v === "__all__" ? null : v)
+              }
+            >
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue placeholder="All tasks" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All tasks</SelectItem>
+                <SelectSeparator />
+                {uniqueTasks.map((task) => (
+                  <SelectItem key={task} value={task}>
+                    {task}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : null}
 
@@ -266,24 +300,52 @@ function FilterPopover({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Type
             </p>
-            <div className="max-h-40 overflow-auto space-y-0.5">
-              {presentKinds.map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  onClick={() => toggleKind(kind)}
-                  className={`w-full rounded px-2 py-1 text-left text-xs transition-colors ${
-                    filterKinds.has(kind)
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  {KIND_LABELS[kind]}
-                </button>
-              ))}
-            </div>
+            <Select
+              value={filterKind ?? "__all__"}
+              onValueChange={(v) =>
+                onFilterKindChange(
+                  v === "__all__" ? null : (v as HistoryActivityKind),
+                )
+              }
+            >
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All types</SelectItem>
+                <SelectSeparator />
+                {presentKinds.map((kind) => (
+                  <SelectItem key={kind} value={kind}>
+                    {KIND_LABELS[kind]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : null}
+
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Time range
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={filterFrom}
+              onChange={(e) => onFilterFromChange(e.target.value)}
+              className="h-7 flex-1 text-xs"
+              aria-label="From date"
+            />
+            <span className="shrink-0 text-xs text-muted-foreground">to</span>
+            <Input
+              type="date"
+              value={filterTo}
+              onChange={(e) => onFilterToChange(e.target.value)}
+              className="h-7 flex-1 text-xs"
+              aria-label="To date"
+            />
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -294,9 +356,11 @@ export default function HistoryMenu() {
   const [configMode, setConfigMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filterTask, setFilterTask] = useState<string | null>(null);
-  const [filterKinds, setFilterKinds] = useState<Set<HistoryActivityKind>>(
-    new Set(),
+  const [filterKind, setFilterKind] = useState<HistoryActivityKind | null>(
+    null,
   );
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
 
   const nowMs = useHistoryNowMsEffect();
   const activity = useTODOStore(
@@ -313,7 +377,14 @@ export default function HistoryMenu() {
 
   const filteredActivity = allDisplayActivity.filter((item) => {
     if (filterTask && item.taskLabel !== filterTask) return false;
-    if (filterKinds.size > 0 && !filterKinds.has(item.kind)) return false;
+    if (filterKind && item.kind !== filterKind) return false;
+    if (filterFrom && item.createdAt < new Date(filterFrom).toISOString())
+      return false;
+    if (
+      filterTo &&
+      item.createdAt > new Date(`${filterTo}T23:59:59`).toISOString()
+    )
+      return false;
     return true;
   });
 
@@ -447,13 +518,23 @@ export default function HistoryMenu() {
               <FilterPopover
                 allItems={allDisplayActivity}
                 filterTask={filterTask}
-                filterKinds={filterKinds}
+                filterKind={filterKind}
+                filterFrom={filterFrom}
+                filterTo={filterTo}
                 onFilterTaskChange={(t) => {
                   setFilterTask(t);
                   setSelectedIds(new Set());
                 }}
-                onFilterKindsChange={(k) => {
-                  setFilterKinds(k);
+                onFilterKindChange={(k) => {
+                  setFilterKind(k);
+                  setSelectedIds(new Set());
+                }}
+                onFilterFromChange={(v) => {
+                  setFilterFrom(v);
+                  setSelectedIds(new Set());
+                }}
+                onFilterToChange={(v) => {
+                  setFilterTo(v);
                   setSelectedIds(new Set());
                 }}
               />
@@ -477,42 +558,56 @@ export default function HistoryMenu() {
                   }}
                 />
               ) : null}
-              <button
-                type="button"
-                aria-label={configMode ? "Exit config" : "Config"}
-                onClick={() =>
-                  configMode ? exitConfigMode() : setConfigMode(true)
-                }
-                className={`flex size-7 items-center justify-center rounded-full border transition-colors ${
-                  configMode
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Icon icon={Settings01Icon} className="size-3.5" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={configMode ? "Exit config" : "Config"}
+                    onClick={() =>
+                      configMode ? exitConfigMode() : setConfigMode(true)
+                    }
+                    className={`flex size-7 items-center justify-center rounded-full border transition-colors ${
+                      configMode
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Icon icon={Settings01Icon} className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {configMode ? "Exit config" : "Config"}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
           {/* Select-all row */}
           {configMode ? (
             <div className="flex items-center gap-2 border-b px-3 py-1.5">
-              <button
-                type="button"
-                aria-label={allSelected ? "Deselect all" : "Select all"}
-                onClick={toggleSelectAll}
-                className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                  allSelected
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-muted-foreground/40"
-                }`}
-              >
-                {allSelected ? (
-                  <Icon icon={MinusSignIcon} className="size-2.5" />
-                ) : selectionMode ? (
-                  <span className="block size-1.5 rounded-full bg-muted-foreground/40" />
-                ) : null}
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={allSelected ? "Deselect all" : "Select all"}
+                    onClick={toggleSelectAll}
+                    className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      allSelected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-muted-foreground/40"
+                    }`}
+                  >
+                    {allSelected ? (
+                      <Icon icon={MinusSignIcon} className="size-2.5" />
+                    ) : selectionMode ? (
+                      <span className="block size-1.5 rounded-full bg-muted-foreground/40" />
+                    ) : null}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {allSelected ? "Deselect all" : "Select all"}
+                </TooltipContent>
+              </Tooltip>
               <span className="text-xs text-muted-foreground">
                 {allSelected ? "Deselect all" : "Select all"}
               </span>

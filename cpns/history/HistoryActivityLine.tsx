@@ -614,22 +614,32 @@ export function HistoryActivityLine({
 
           {configMode ? (
             <>
-              <button
-                type="button"
-                aria-label="Add note"
-                onClick={() => setAddNoteOpen(true)}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-foreground transition-opacity"
-              >
-                <Icon icon={MessageAdd01Icon} className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Delete log"
-                onClick={onDelete}
-                className="opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-destructive transition-opacity"
-              >
-                <Icon icon={Delete02Icon} className="size-3.5" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Add note"
+                    onClick={() => setAddNoteOpen(true)}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-foreground transition-opacity"
+                  >
+                    <Icon icon={MessageAdd01Icon} className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Add note</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Delete log"
+                    onClick={onDelete}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-destructive transition-opacity"
+                  >
+                    <Icon icon={Delete02Icon} className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Delete log</TooltipContent>
+              </Tooltip>
             </>
           ) : null}
         </div>
