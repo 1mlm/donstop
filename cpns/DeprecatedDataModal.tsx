@@ -1,12 +1,12 @@
 "use client";
 
-import { AlertCircleIcon } from "@hugeicons/core-free-icons";
+import { Delete02Icon, Download01Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/cpns/Icon";
 import { useTODOStore } from "@/lib/store";
+import { TODO_STORE_STORAGE_KEY } from "@/lib/store/store-model";
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -14,30 +14,48 @@ import {
   AlertDialogTitle,
 } from "@/shadcn/ui/alert-dialog";
 
+function downloadOldData() {
+  try {
+    const raw = localStorage.getItem(TODO_STORE_STORAGE_KEY);
+    if (!raw) return;
+    const blob = new Blob([raw], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "donstop-backup.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    // ignore
+  }
+}
+
 export function DeprecatedDataModal() {
   const needsDataReset = useTODOStore((s) => s.needsDataReset);
   const wipeAllData = useTODOStore((s) => s.wipeAllData);
-  const dismissDataReset = useTODOStore((s) => s.dismissDataReset);
 
   return (
     <AlertDialog open={needsDataReset}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <div className="mx-auto mb-1 flex size-10 items-center justify-center rounded-full bg-amber-500/15 text-amber-500">
-            <Icon icon={AlertCircleIcon} className="size-5" />
-          </div>
           <AlertDialogTitle>Data format changed</AlertDialogTitle>
           <AlertDialogDescription>
             Your saved data uses an old nested-task format that no longer
-            exists. Reset everything to start fresh — or keep your tasks as-is
-            (nesting will be ignored).
+            exists. Download it as a backup if you want, then reset to start
+            fresh.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={dismissDataReset}>
-            Keep my data
-          </AlertDialogCancel>
+          <button
+            type="button"
+            onClick={downloadOldData}
+            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+          >
+            <Icon icon={Download01Icon} className="size-4" />
+            Download my data
+          </button>
           <AlertDialogAction variant="destructive" onClick={wipeAllData}>
+            <Icon icon={Delete02Icon} className="size-4" />
             Reset everything
           </AlertDialogAction>
         </AlertDialogFooter>
