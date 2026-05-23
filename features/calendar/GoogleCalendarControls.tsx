@@ -30,6 +30,7 @@ import {
   useCalendarSync,
   useGoogleCalendarAuth,
 } from "@/lib/calendar";
+import { triggerConfetti } from "@/lib/confetti";
 import { safeLocalStorage } from "@/lib/safe-local-storage";
 import { useTODOStore } from "@/lib/store";
 import { formatDateTime } from "@/lib/util";
@@ -309,6 +310,7 @@ function GoogleCalendarControlsInner() {
       logCalendarConnected(
         auth?.profile?.email || auth?.profile?.name || "Google account",
       );
+      triggerConfetti();
     }
 
     wasLinkedRef.current = isLinked;

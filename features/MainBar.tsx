@@ -2,8 +2,10 @@
 
 import { PartyIcon, SleepingIcon, StopIcon } from "@hugeicons/core-free-icons";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useWebHaptics } from "web-haptics/react";
 import { useActiveTaskSummary } from "@/lib/active-task.hooks";
+import { triggerConfetti } from "@/lib/confetti";
 import { MOTION_PROPS } from "@/lib/motion";
 import { useTODOStore } from "@/lib/store";
 import { formatPreviewTime } from "@/lib/util";
@@ -40,6 +42,7 @@ function ActiveTaskState({
   onStop: () => void;
   onFinish: () => void;
 }) {
+  const { trigger: triggerHaptic } = useWebHaptics();
   return (
     <TooltipProvider>
       <motion.div
@@ -75,7 +78,7 @@ function ActiveTaskState({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={onStop}
+                onClick={() => { triggerHaptic("Light"); onStop(); }}
                 aria-label="Stop task"
                 className="size-16 rounded-full"
               >
@@ -88,7 +91,7 @@ function ActiveTaskState({
             <TooltipTrigger asChild>
               <Button
                 size="icon"
-                onClick={onFinish}
+                onClick={() => { triggerHaptic("Success"); onFinish(); }}
                 aria-label="Finish task"
                 className="size-16 rounded-full"
               >
@@ -108,16 +111,21 @@ export default function MainBar() {
   const stopActiveTask = useTODOStore((s) => s.stopActiveTask);
   const finishActiveTask = useTODOStore((s) => s.finishActiveTask);
 
+  const handleFinish = useCallback(() => {
+    finishActiveTask();
+    triggerConfetti();
+  }, [finishActiveTask]);
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        finishActiveTask();
+        handleFinish();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [finishActiveTask]);
+  }, [handleFinish]);
 
   return (
     <Bar className="flex items-center justify-center">
@@ -126,7 +134,7 @@ export default function MainBar() {
           <ActiveTaskState
             activeTaskSummary={activeTaskSummary}
             onStop={stopActiveTask}
-            onFinish={finishActiveTask}
+            onFinish={handleFinish}
           />
         ) : (
           <IdleTaskState />

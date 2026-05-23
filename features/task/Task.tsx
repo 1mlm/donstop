@@ -1,27 +1,28 @@
 "use client";
 
-import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowDataTransferDiagonalIcon,
+  Cancel01Icon,
   Clock01Icon,
   Copy01Icon,
   Delete02Icon,
   Edit03Icon,
-  Favorite,
   FavouriteIcon,
   HeartbreakIcon,
   MoreHorizontalSquare01Icon,
   PartyIcon,
   Play,
   StopIcon,
+  Tag01Icon,
   TextFontIcon,
   Tick02Icon,
   Undo03Icon,
   UndoIcon,
 } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useWebHaptics } from "web-haptics/react";
 import { useTaskRunningSecondsThrottled } from "@/lib/active-task.hooks";
+import { triggerConfetti } from "@/lib/confetti";
 import { type TagID, type TaskID, useTODOStore } from "@/lib/store";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shadcn/ui/popover";
 import {
@@ -32,19 +33,16 @@ import {
 } from "@/shadcn/ui/tooltip";
 import { Icon } from "../Icon";
 import { TAG_ICONS } from "../tags/tag-icons";
-import { useTaskDndContext } from "./TaskDndContext";
 import {
-  DropGapIndicator,
   type MenuGroup,
   TaskActionsMenu,
-  TaskDragPlaceholder,
 } from "./task.components";
 import {
   useActionsMenuViewportSyncEffect,
   useTaskEditableFocusEffect,
   useTaskEditValueSyncEffect,
 } from "./task.hooks";
-import { getTaskDropTargetID, getTaskDurationLabel } from "./task.utils";
+import { getTaskDurationLabel } from "./task.utils";
 
 function formatDurationInputValue(totalSeconds: number) {
   const safeSeconds = Math.max(0, Math.floor(totalSeconds));
@@ -110,24 +108,34 @@ function TaskTagChips({
         const IconComp = TAG_ICONS[tag.icon];
         const isFiltered = activeTagFilter === tag.id;
         return (
-          <button
+          <div
             key={tag.id}
-            type="button"
-            onClick={() => setActiveTagFilter(isFiltered ? null : tag.id)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              removeTagFromTask(taskID, tag.id as TagID);
-            }}
-            title={`Filter by ${tag.name} (right-click to remove)`}
-            className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium transition-colors select-none ${
+            className={`group inline-flex items-center rounded-full border select-none transition-colors ${
               isFiltered
                 ? "border-primary/50 bg-primary/15 text-primary"
                 : "border-border/50 bg-muted/40 text-muted-foreground hover:border-primary/30 hover:bg-primary/8 hover:text-foreground"
             }`}
           >
-            {IconComp && <Icon icon={IconComp} className="size-2.5 shrink-0" />}
-            {tag.name}
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTagFilter(isFiltered ? null : tag.id)}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium"
+            >
+              {IconComp && <Icon icon={IconComp} className="size-3 shrink-0" />}
+              {tag.name}
+            </button>
+            <span
+              role="button"
+              aria-label={`Remove ${tag.name} tag`}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeTagFromTask(taskID, tag.id as TagID);
+              }}
+              className="inline-flex items-center max-w-0 overflow-hidden opacity-0 ml-0 group-hover:max-w-[12px] group-hover:opacity-100 group-hover:mr-1.5 transition-[max-width,opacity,margin] duration-150 ease-out cursor-pointer"
+            >
+              <Icon icon={Cancel01Icon} className="size-3" />
+            </span>
+          </div>
         );
       })}
     </div>
@@ -191,18 +199,20 @@ export function Task({ taskID }: { taskID: TaskID }) {
   const renameTask = useTODOStore((state) => state.renameTask);
   const deleteTask = useTODOStore((state) => state.deleteTask);
   const logTaskCopied = useTODOStore((state) => state.logTaskCopied);
+  const assignTagToTask = useTODOStore((state) => state.assignTagToTask);
+  const removeTagFromTask = useTODOStore((state) => state.removeTagFromTask);
+  const tags = useTODOStore((state) => state.tags);
   const task = useTODOStore((state) => state.getTaskFromID(taskID));
   const isActive = useTODOStore(
     (state) => state.activeSession?.taskId === taskID,
   );
   const activeTaskID = useTODOStore((state) => state.activeSession?.taskId);
   const runningSeconds = useTaskRunningSecondsThrottled(taskID);
+  const { trigger: triggerHaptic } = useWebHaptics();
   const isFavorite = task?.isFavorite ?? false;
   const taskLabel = task?.label ?? "";
   const taskStoredSeconds = task?.time ?? 0;
-  const { draggingTaskID } = useTaskDndContext();
-  const shouldShowRowControls =
-    (!draggingTaskID && isTaskHovered) || actionsMenuOpen;
+  const shouldShowRowControls = isTaskHovered || actionsMenuOpen;
   const isAnyMenuOpen = actionsMenuOpen;
 
   useTaskEditValueSyncEffect({ taskLabel, setEditValue: setEditNameValue });
@@ -313,33 +323,11 @@ export function Task({ taskID }: { taskID: TaskID }) {
 
   const tryDeleteTask = () => {
     const didDelete = deleteTask(taskID);
-    if (didDelete) closeMenus();
+    if (didDelete) {
+      triggerHaptic("Error");
+      closeMenus();
+    }
   };
-
-  const isDropDisabled = draggingTaskID === taskID;
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDraggableNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
-    id: taskID,
-    disabled: editMode !== null || isTimePopoverOpen,
-  });
-
-  const { setNodeRef: setDropBeforeNodeRef, isOver: isOverBefore } =
-    useDroppable({
-      id: getTaskDropTargetID(taskID, "before"),
-      disabled: isDropDisabled,
-    });
-  const { setNodeRef: setDropAfterNodeRef, isOver: isOverAfter } = useDroppable(
-    {
-      id: getTaskDropTargetID(taskID, "after"),
-      disabled: isDropDisabled,
-    },
-  );
 
   if (!task) return null;
 
@@ -360,11 +348,15 @@ export function Task({ taskID }: { taskID: TaskID }) {
           label: "Finish",
           onClick: isActive
             ? () => {
+                triggerHaptic("Success");
                 finishActiveTask();
+                triggerConfetti();
                 closeMenus();
               }
             : () => {
+                triggerHaptic("Success");
                 finishTask(taskID);
+                triggerConfetti();
                 closeMenus();
               },
         },
@@ -390,6 +382,24 @@ export function Task({ taskID }: { taskID: TaskID }) {
     {
       id: "edit",
       items: [
+        {
+          id: "tags",
+          icon: Tag01Icon,
+          label: "Tags",
+          visible: tags.length > 0,
+          submenu: tags.map((tag) => {
+            const isAssigned = (task.tagIds ?? []).includes(tag.id);
+            return {
+              id: tag.id,
+              icon: isAssigned ? Tick02Icon : TAG_ICONS[tag.icon],
+              label: tag.name,
+              onClick: () => {
+                if (isAssigned) removeTagFromTask(taskID, tag.id as TagID);
+                else assignTagToTask(taskID, tag.id as TagID);
+              },
+            };
+          }),
+        },
         {
           id: "name",
           icon: TextFontIcon,
@@ -477,79 +487,37 @@ export function Task({ taskID }: { taskID: TaskID }) {
     runningSeconds,
   });
 
-  const isSourceOfActiveDrag = draggingTaskID === taskID;
-  const isRowBeingDragged = isDragging || isSourceOfActiveDrag;
-  const showDropTargets = Boolean(draggingTaskID) && !isDropDisabled;
-
-  const showBeforeGap = showDropTargets && isOverBefore;
-  const showAfterGap = showDropTargets && isOverAfter;
-
-  const draggableStyle = {
-    transform: isRowBeingDragged
-      ? undefined
-      : CSS.Translate.toString(transform),
-    opacity: 1,
-  };
-
   return (
     <TooltipProvider>
-      <div
-        className={`relative flex flex-col overflow-visible transition-[padding] duration-150 ease-out ${
-          showBeforeGap ? "pt-2" : "pt-0"
-        } ${showAfterGap ? "pb-2" : "pb-0"}`}
-      >
-        {!isRowBeingDragged ? (
-          <DropGapIndicator
-            setNodeRef={setDropBeforeNodeRef}
-            isActive={showDropTargets && isOverBefore}
-            position="top"
-          />
-        ) : null}
-
+      <div className="relative flex flex-col overflow-visible">
         <div
-          ref={setDraggableNodeRef}
-          style={{ ...draggableStyle, touchAction: "none" }}
-          {...attributes}
-          {...listeners}
           className={`flex flex-col relative isolate select-none
-            transition-[padding,transform,opacity,border-color,background-color,color,box-shadow]
+            transition-[border-color,background-color,color,box-shadow]
             duration-300 ease-out border rounded-2xl squircle squircle-2xl py-1.5 px-2 pr-2.5
             ${isAnyMenuOpen ? "z-[200]" : "z-0 hover:z-30"}
             ${
               isActive
                 ? "bg-primary/50 text-primary-foreground shadow-lg font-semibold"
                 : "bg-primary/5 hover:bg-primary/7 hover:border-primary/25"
-            }
-            ${isRowBeingDragged ? "border-border/50 bg-muted/20 cursor-grabbing-custom" : "cursor-grab-custom"}`}
+            }`}
         >
-          {!isRowBeingDragged && isFavorite && (
-            <div className="absolute -top-2 -right-1 z-10 rotate-12">
-              <Icon
-                icon={Favorite}
-                className="size-5 text-primary fill-primary drop-shadow-sm duration-300 hover:animate-ping hover:-translate-x-2 hover:translate-y-2"
-              />
-            </div>
+          {isFavorite && (
+            <span className="absolute left-0.5 top-2.5 bottom-2.5 w-[3px] rounded-full bg-primary/60 pointer-events-none" />
           )}
 
-          {isRowBeingDragged ? (
-            <TaskDragPlaceholder />
-          ) : (
-            <>
-              <div
-                ref={taskHeaderRowRef}
-                onPointerEnter={() => {
-                  if (
-                    !isRowBeingDragged &&
-                    typeof window !== "undefined" &&
-                    !("ontouchstart" in window || navigator.maxTouchPoints > 0)
-                  ) {
-                    setIsTaskHovered(true);
-                  }
-                }}
-                onPointerLeave={() => {
-                  if (!isRowBeingDragged && !isAnyMenuOpen)
-                    setIsTaskHovered(false);
-                }}
+          <div
+              ref={taskHeaderRowRef}
+              onPointerEnter={() => {
+                if (
+                  typeof window !== "undefined" &&
+                  !("ontouchstart" in window || navigator.maxTouchPoints > 0)
+                ) {
+                  setIsTaskHovered(true);
+                }
+              }}
+              onPointerLeave={() => {
+                if (!isAnyMenuOpen) setIsTaskHovered(false);
+              }}
                 onTouchEnd={(_e) => {
                   if (
                     typeof window !== "undefined" &&
@@ -608,6 +576,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                           className="rounded-full bg-transparent p-1 transition-colors hover:bg-primary/15"
                           onClick={() => {
                             if (isActive) {
+                              triggerHaptic("Light");
                               stopActiveTask();
                               if (
                                 typeof window !== "undefined" &&
@@ -620,6 +589,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
                               }
                               return;
                             }
+                            triggerHaptic("Selection");
                             startTask(taskID);
                             if (
                               typeof window !== "undefined" &&
@@ -755,17 +725,7 @@ export function Task({ taskID }: { taskID: TaskID }) {
               </div>
 
               <TaskTagChips tagIds={task.tagIds ?? []} taskID={taskID} />
-            </>
-          )}
         </div>
-
-        {!isRowBeingDragged ? (
-          <DropGapIndicator
-            setNodeRef={setDropAfterNodeRef}
-            isActive={showDropTargets && isOverAfter}
-            position="bottom"
-          />
-        ) : null}
       </div>
     </TooltipProvider>
   );
